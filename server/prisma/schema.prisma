@@ -49,17 +49,19 @@ model Review {
 }
 
 model Comment {
-  id        Int       @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
+  recipeId Int
+  parentId Int?
+  userId   String?
+
   content   String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id])
-  userId    String
-  recipe    Recipe    @relation(fields: [recipeId], references: [id])
-  recipeId  Int
-  comments  Comment[] @relation("CommentToComment")
-  parent    Comment?  @relation("CommentToComment", fields: [parentId], references: [id])
-  parentId  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipe   Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull) // Keep content if user is removed
+  comments Comment[] @relation("CommentToComment")
+  parent   Comment?  @relation("CommentToComment", fields: [parentId], references: [id], onDelete: SetNull)
 
   @@index([parentId])
   @@index([recipeId])
@@ -79,12 +81,14 @@ model Particularity {
 }
 
 model ParticularityRecipe {
-  particularity   Particularity @relation(fields: [particularityId], references: [id], onDelete: Restrict)
-  particularityId Int
-  recipe          Recipe        @relation(fields: [recipeId], references: [id], onDelete: Restrict)
   recipeId        Int
+  particularityId Int
+
+  recipe        Recipe        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  particularity Particularity @relation(fields: [particularityId], references: [id], onDelete: Cascade)
 
   @@id([particularityId, recipeId])
+  @@index([recipeId])
 }
 
 model Recipe {
@@ -112,12 +116,14 @@ model Recipe {
 }
 
 model CategoryRecipe {
-  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
-  recipeId   Int
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   categoryId Int
+  recipeId   Int
+
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@id([categoryId, recipeId])
+  @@index([recipeId])
 }
 
 model Category {
@@ -127,20 +133,22 @@ model Category {
 }
 
 model Segment {
-  id               Int               @id @default(autoincrement())
-  recipe           Recipe            @relation(fields: [recipeId], references: [id])
-  recipeId         Int
+  id       Int    @id @default(autoincrement())
+  recipeId Int
+  title    String
+
+  recipe           Recipe            @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   instructionSteps InstructionStep[]
 }
 
 model InstructionStep {
   id          Int     @id @default(autoincrement())
+  segmentId   Int
   stepNumber  Int
   description String
   media       String? @db.Text // e.g., Cloudinary/Supabase URL
   mediaAlt    String? @db.Text // Alternative text for the media
-  segment     Segment @relation(fields: [segmentId], references: [id])
-  segmentId   Int
+  segment     Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
 
   @@unique([segmentId, stepNumber]) // Unique constraint for segmentId and stepNumber
   @@index([segmentId])
@@ -152,48 +160,68 @@ enum IngredientSource {
 }
 
 model Ingredient {
-  id        Int              @id @default(autoincrement())
-  name      String           @unique
-  unit      String
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
   source    IngredientSource @default(LOCAL)
   fdcId     Int?             @unique
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
-  IngredientInstance IngredientInstance[]
-  IngredientNutrient IngredientNutrient[]
+  ingredientInstances IngredientInstance[]
+  nutrientValues      NutrientValue[]
 }
 
 model IngredientInstance {
-  id           Int      @id @default(autoincrement())
+  id           Int @id @default(autoincrement())
   ingredientId Int
   recipeId     Int
-  quantity     Decimal? // This means the quantity can have up to 10 digits, with 3 of them after the decimal point
-  unit         String?
-  grams        Decimal?
 
-  recipe     Recipe     @relation(fields: [recipeId], references: [id])
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  grams Decimal? @db.Decimal(10, 3) // Canonical
+
+  displayQty  Decimal? @db.Decimal(10, 3) // This means the quantity can have up to 10 digits, with 3 of them after the decimal point
+  displayUnit String?
+  note        String? // Chopped, room temps, etc.
+  isOptional  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  segmentId  Int?
 
   @@index([recipeId])
   @@index([ingredientId])
 }
 
-model IngredientNutrient {
-  ingredientId  Int
-  nutrientId    Int
-  amountPer100g Decimal
+enum NutrientUnit {
+  KCAL
+  G
+  MG
+  UG
+  IU
+}
 
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
-  nutrient   Nutrient   @relation(fields: [nutrientId], references: [id])
+enum NutrientBasis {
+  PER_100G
+  PER_SERVING
+}
+
+model NutrientValue {
+  ingredientId Int
+  nutrientId   Int
+  amount       Decimal       @db.Decimal(10, 3) // This means the amount can have up to 10 digits, with 3 of them after the decimal point
+  basis        NutrientBasis @default(PER_100G)
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  nutrient   Nutrient   @relation(fields: [nutrientId], references: [id], onDelete: Cascade)
 
   @@id([ingredientId, nutrientId])
+  @@index([ingredientId]) // To find nutrient values by ingredient
 }
 
 model Nutrient {
-  id                   Int                  @id @default(autoincrement())
-  usdaId               Int?                 @unique
-  name                 String               @unique
-  unit                 String
-  ingredientsNutrients IngredientNutrient[]
+  id             Int             @id @default(autoincrement())
+  name           String          @unique
+  unit           String // kcal, g, mg, etc
+  nutrientValues NutrientValue[]
 }
