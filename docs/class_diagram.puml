@@ -1,0 +1,113 @@
+@startuml class_diagram
+title Chez Huong — Class Diagram
+
+skinparam componentStyle rectangle
+skinparam defaultFontName Monospace
+
+enum Role {
+    "ADMIN"
+    "WRITER"
+    "READER"
+}
+
+enum Difficulty {
+    "EASY"
+    "MEDIUM"
+    "HARD"
+}
+
+enum RecipeType {
+    "ENTREE"
+    "MAIN"
+    "DESSERT"
+}
+
+class Utilisateur {
+    +nom: string
+    +prenom: string
+    +email: string
+    +motDePasse: string
+    +role: Role
+}
+
+class Recette {
+    +nom: string
+    +description: string
+    +tempsPrepa: number
+    +tempsCuisson: number
+    +difficulte: Difficulty
+    +type: RecipeType
+    +cuisine: string
+    +portion: number
+    +utilisateur: Utilisateur
+}
+
+class Particularite {
+    +nom: string
+}
+
+class Step {
+    +ordre: number
+    +nom: string
+    +description: string
+    +recette: Recette
+    +mediaUrl: string
+}
+
+class IngredientSection {
+    +nom: string
+    +recette: Recette
+}
+
+class Ingredient {
+    +nom: string
+    +fdcId: number
+}
+
+class RecipeIngredient {
+    +section: IngredientSection
+    +ingredient: Ingredient
+    +quantite: string
+    +unit: string
+}
+
+class Like {
+    +utilisateur: Utilisateur
+    +recette: Recette
+}
+
+class Comment {
+    +utilisateur: Utilisateur
+    +recette: Recette
+    +contenu: string
+    +date: Date
+}
+
+class CalculNutritionnel {
+    +recette: Recette
+    +calories: number
+    +proteines: number
+    +lipides: number
+    +carbohydrates: number
+}
+
+Utilisateur "1" --> "*" Recette: Consulte/Écrit/Modifie
+Utilisateur "*" --> "1" Role: Détient
+
+Recette "1" --> "*" IngredientSection: Contient
+IngredientSection "1" --> "*" RecipeIngredient: Contient
+RecipeIngredient "*" --> "1" Ingredient: Est défini par
+
+Recette "*" --> "*" Particularite: Possède
+Recette --> Difficulty
+Recette --> RecipeType
+
+Recette "1" --> "1" CalculNutritionnel: Analyse
+Recette "1" <-- "*" Like: Concerne
+Recette "1" <-- "*" Comment: Concerne
+Recette "1" --> "*" Step: Contient
+
+Utilisateur "1" --> "*" Like: Like/Dislike
+Utilisateur "1" --> "*" Comment: Commente
+
+@enduml

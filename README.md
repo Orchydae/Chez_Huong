@@ -76,3 +76,11 @@ We use NestJS because it supports TypeScript and provides robust functionality.
 
 ### Connecting Prisma to NestJS
 Follow the [Prisma + NestJS documentation](https://docs.nestjs.com/recipes/prisma) to integrate Prisma into the NestJS backend.
+
+### Users module
+At this point, we apply the same logic for the users as to the module, service and controller.
+
+---
+
+## Authentication & JWT
+### Visit [Authentication | NestJS](https://docs.nestjs.com/security/authentication) documentation

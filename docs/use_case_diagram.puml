@@ -1,0 +1,33 @@
+@startuml
+title Chez Huong — Use Case Diagram
+
+skinparam dpi 150
+skinparam usecase {
+  BorderColor #666
+  ArrowColor  #444
+}
+left to right direction
+
+actor Utilisateur
+actor "Système de calcul nutritionnel" as SCN
+
+rectangle "Chez Huong" as CH {
+    usecase "UC-01\nÉcrire une recette" as UC01
+    usecase "UC-02\nConsulter une recette" as UC02
+    usecase "UC-03\nModifier une recette" as UC03
+    usecase "UC-04\nSupprimer une recette" as UC04
+    usecase "UC-05\nAimer une recette" as UC05
+    usecase "UC-06\nCommenter une recette" as UC06
+    usecase "UC-07\nCalculer les valeurs nutritives" as UC07
+}
+
+Utilisateur --> UC01
+Utilisateur --> UC02
+Utilisateur --> UC03
+Utilisateur --> UC04
+Utilisateur --> UC05
+Utilisateur --> UC06
+SCN --> UC07
+
+
+@enduml

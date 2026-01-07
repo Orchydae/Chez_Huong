@@ -1,71 +1,30 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  //output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
-  VISITOR
-  EDITOR
-  MODERATOR
   ADMIN
+  WRITER
+  READER
 }
 
 model User {
-  id           String    @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String    @unique
-  passwordHash String
-  role         Role      @default(VISITOR)
-  recipes      Recipe[]
-  favorites    Recipe[]  @relation("UserFavorites")
-  reviews      Review[]
-  comments     Comment[]
-}
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  password  String
+  role      Role
 
-model Review {
-  rating    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  recipeId  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@id([userId, recipeId]) // Composite primary key
-  @@index([recipeId])
-  @@index([userId])
-}
-
-model Comment {
-  id       Int     @id @default(autoincrement())
-  recipeId Int
-  parentId Int?
-  userId   String?
-
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  recipe   Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull) // Keep content if user is removed
-  comments Comment[] @relation("CommentToComment")
-  parent   Comment?  @relation("CommentToComment", fields: [parentId], references: [id], onDelete: SetNull)
-
-  @@index([parentId])
-  @@index([recipeId])
-  @@index([userId])
+  recipes   Recipe[]
+  likes     Like[]
+  comments  Comment[]
 }
 
 enum Difficulty {
@@ -74,154 +33,104 @@ enum Difficulty {
   HARD
 }
 
-model Particularity {
-  id                     Int                   @id @default(autoincrement())
-  name                   String                @unique
-  particularitiesRecipes ParticularityRecipe[]
-}
-
-model ParticularityRecipe {
-  recipeId        Int
-  particularityId Int
-
-  recipe        Recipe        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  particularity Particularity @relation(fields: [particularityId], references: [id], onDelete: Cascade)
-
-  @@id([particularityId, recipeId])
-  @@index([recipeId])
+enum RecipeType {
+  ENTREE
+  MAIN
+  DESSERT
 }
 
 model Recipe {
-  id          Int        @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String?
+  prepTime    Int // in minutes
+  cookTime    Int // in minutes
+  difficulty  Difficulty
+  type        RecipeType
+  cuisine     String // e.g., "Vietnamese", "French"
+  servings    Int
+  
+  authorId    String
+  author      User    @relation(fields: [authorId], references: [id])
+
+  particularities Particularity[]
+  steps           Step[]
+  ingredientSections IngredientSection[]
+  nutritionalInfo NutritionalInfo?
+  likes           Like[]
+  comments        Comment[]
+}
+
+model IngredientSection {
+  id       Int                @id @default(autoincrement())
+  name     String
+  recipeId Int
+  recipe   Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+}
+
+model Particularity {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique // e.g., "Vegan", "No Nuts"
+  recipes Recipe[]
+}
+
+model Step {
+  id          Int    @id @default(autoincrement())
+  order       Int
   title       String
   description String
-  difficulty  Difficulty @default(MEDIUM)
-  prepTime    Int
-  cookTime    Int
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  author      User       @relation(fields: [authorId], references: [id])
-  authorId    String
-  favoritedBy User[]     @relation("UserFavorites")
-
-  particularitiesRecipes ParticularityRecipe[]
-  ingredientsInstances   IngredientInstance[]
-  segments               Segment[]
-  reviews                Review[]
-  comments               Comment[]
-  categoryRecipes        CategoryRecipe[]
-
-  @@index([authorId])
-  @@index([createdAt])
-}
-
-model CategoryRecipe {
-  categoryId Int
-  recipeId   Int
-
-  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@id([categoryId, recipeId])
-  @@index([recipeId])
-}
-
-model Category {
-  id              Int              @id @default(autoincrement())
-  name            String           @unique
-  categoryRecipes CategoryRecipe[]
-}
-
-model Segment {
-  id       Int    @id @default(autoincrement())
-  recipeId Int
-  title    String
-
-  recipe           Recipe            @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  instructionSteps InstructionStep[]
-}
-
-model InstructionStep {
-  id          Int     @id @default(autoincrement())
-  segmentId   Int
-  stepNumber  Int
-  description String
-  media       String? @db.Text // e.g., Cloudinary/Supabase URL
-  mediaAlt    String? @db.Text // Alternative text for the media
-  segment     Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
-
-  @@unique([segmentId, stepNumber]) // Unique constraint for segmentId and stepNumber
-  @@index([segmentId])
-}
-
-enum IngredientSource {
-  LOCAL
-  USDA
+  mediaUrl    String?
+  recipeId    Int
+  recipe      Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
 
 model Ingredient {
-  id   Int    @id @default(autoincrement())
-  name String @unique
-
-  source    IngredientSource @default(LOCAL)
-  fdcId     Int?             @unique
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  ingredientInstances IngredientInstance[]
-  nutrientValues      NutrientValue[]
+  id      Int                @id @default(autoincrement())
+  name    String             @unique
+  fdcId   Int?               @unique // FoodData Central ID (link to USDA)
+  recipes RecipeIngredient[]
 }
 
-model IngredientInstance {
-  id           Int @id @default(autoincrement())
+model RecipeIngredient {
+  sectionId    Int
   ingredientId Int
-  recipeId     Int
+  quantity     String
+  unit         String
 
-  grams Decimal? @db.Decimal(10, 3) // Canonical
+  section    IngredientSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  ingredient Ingredient        @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
 
-  displayQty  Decimal? @db.Decimal(10, 3) // This means the quantity can have up to 10 digits, with 3 of them after the decimal point
-  displayUnit String?
-  note        String? // Chopped, room temps, etc.
-  isOptional  Boolean  @default(false)
-  sortOrder   Int      @default(0)
-
-  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  segmentId  Int?
-
-  @@index([recipeId])
-  @@index([ingredientId])
+  @@id([sectionId, ingredientId])
 }
 
-enum NutrientUnit {
-  KCAL
-  G
-  MG
-  UG
-  IU
+model Like {
+  userId   String
+  recipeId Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, recipeId])
 }
 
-enum NutrientBasis {
-  PER_100G
-  PER_SERVING
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId  Int
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
 
-model NutrientValue {
-  ingredientId Int
-  nutrientId   Int
-  amount       Decimal       @db.Decimal(10, 3) // This means the amount can have up to 10 digits, with 3 of them after the decimal point
-  basis        NutrientBasis @default(PER_100G)
+model NutritionalInfo {
+  id            Int    @id @default(autoincrement())
+  calories      Int
+  protein       Int
+  fat           Int
+  carbohydrates Int
 
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  nutrient   Nutrient   @relation(fields: [nutrientId], references: [id], onDelete: Cascade)
-
-  @@id([ingredientId, nutrientId])
-  @@index([ingredientId]) // To find nutrient values by ingredient
-}
-
-model Nutrient {
-  id             Int             @id @default(autoincrement())
-  name           String          @unique
-  unit           String // kcal, g, mg, etc
-  nutrientValues NutrientValue[]
+  recipeId      Int    @unique
+  recipe        Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
