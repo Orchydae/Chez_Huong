@@ -4,7 +4,7 @@ import type { IngredientsPort, Ingredient, PendingIngredientMatch, IngredientWit
 import type { UsdaFoodMatch, UsdaNutritionData } from '../../../domain/ports/usda.port';
 
 @Injectable()
-export class PrismaIngredientsAdapter implements IngredientsPort {
+export class PrismaIngredientsRepository implements IngredientsPort {
     constructor(private readonly prisma: PrismaService) { }
 
     async findMissingIngredients(ingredientIds: number[]): Promise<number[]> {

@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { RecipeRepository } from '../../domain/recipe.repository';
-import { Recipe } from '../../domain/recipe.entity';
+import { RecipeRepository, IngredientSectionData } from '../../../domain/ports/recipe.port';
+import { Recipe } from '../../../domain/entities/recipe.entity';
 import { RecipeMapper } from './recipe.mapper';
-import type { IngredientSectionData } from '../../application/commands/create-recipe.command';
+
 
 @Injectable()
 export class PrismaRecipeRepository implements RecipeRepository {

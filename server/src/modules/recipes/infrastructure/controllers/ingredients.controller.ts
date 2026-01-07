@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Query, Body, BadRequestException } from '@nestjs/common';
-import { IngredientsService } from '../../../application/ingredients.service';
+import { IngredientsService } from '../../application/services/ingredients.service';
 import { ConfirmIngredientDto } from './dtos/confirm-ingredient.dto';
 
 @Controller('ingredients')

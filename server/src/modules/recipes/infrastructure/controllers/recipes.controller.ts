@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { RecipesService } from '../../../application/recipes.service';
+import { RecipesService } from '../../application/services/recipes.service';
 import { CreateRecipeDto } from './dtos/create-recipe.dto';
-import { CreateRecipeCommand, IngredientSectionData, RecipeIngredientData } from '../../../application/commands/create-recipe.command';
+import { CreateRecipeCommand, IngredientSectionData, RecipeIngredientData } from '../../application/commands/create-recipe.command';
 
 @Controller('recipes')
 export class RecipesController {

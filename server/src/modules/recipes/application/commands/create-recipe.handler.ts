@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreateRecipeCommand } from './create-recipe.command';
-import { RecipeRepository } from '../../domain/recipe.repository';
-import { Recipe } from '../../domain/recipe.entity';
+import { RecipeRepository } from '../../domain/ports/recipe.port';
+import { Recipe } from '../../domain/entities/recipe.entity';
 import type { IngredientsPort } from '../../domain/ports/ingredients.port';
 
 @Injectable()

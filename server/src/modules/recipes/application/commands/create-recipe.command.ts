@@ -1,4 +1,4 @@
-import type { NutritionalInfo } from '../../domain/recipe.entity';
+import type { NutritionalInfo } from '../../domain/entities/recipe.entity';
 
 export class RecipeIngredientData {
     constructor(

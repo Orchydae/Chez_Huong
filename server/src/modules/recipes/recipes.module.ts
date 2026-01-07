@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RecipesController } from './infrastructure/adapters/api/recipes.controller';
-import { IngredientsController } from './infrastructure/adapters/api/ingredients.controller';
+import { RecipesController } from './infrastructure/controllers/recipes.controller';
+import { IngredientsController } from './infrastructure/controllers/ingredients.controller';
 import { PrismaModule } from 'src/prisma/prisma.module';
-import { RecipeRepository } from './domain/recipe.repository';
-import { PrismaRecipeRepository } from './infrastructure/persistence/prisma.recipe.repository';
+import { RecipeRepository } from './domain/ports/recipe.port';
+import { PrismaRecipeRepository } from './infrastructure/adapters/persistence/prisma.recipe.repository';
 import { CreateRecipeHandler } from './application/commands/create-recipe.handler';
 import { GetRecipesHandler } from './application/queries/get-recipes.handler';
 import { GetRecipeHandler } from './application/queries/get-recipe.handler';
-import { RecipesService } from './application/recipes.service';
-import { IngredientsService } from './application/ingredients.service';
-import { PrismaIngredientsAdapter } from './infrastructure/adapters/persistence/prisma-ingredients.adapter';
+import { RecipesService } from './application/services/recipes.service';
+import { IngredientsService } from './application/services/ingredients.service';
+import { PrismaIngredientsRepository } from './infrastructure/adapters/persistence/prisma.ingredients.repository';
 import { UsdaAdapter } from './infrastructure/adapters/external/usda.adapter';
 
 @Module({
@@ -33,7 +33,7 @@ import { UsdaAdapter } from './infrastructure/adapters/external/usda.adapter';
         },
         {
             provide: 'IngredientsPort',
-            useClass: PrismaIngredientsAdapter,
+            useClass: PrismaIngredientsRepository,
         },
         {
             provide: 'UsdaPort',
@@ -53,4 +53,3 @@ import { UsdaAdapter } from './infrastructure/adapters/external/usda.adapter';
     ],
 })
 export class RecipesModule { }
-

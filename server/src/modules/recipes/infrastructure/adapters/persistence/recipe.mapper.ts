@@ -1,5 +1,5 @@
 import { Recipe as PrismaRecipe, NutritionalInfo } from '@prisma/client';
-import { Recipe } from '../../domain/recipe.entity';
+import { Recipe } from '../../../domain/entities/recipe.entity';
 
 export type RecipeWithRelations = PrismaRecipe & {
     nutritionalInfo?: NutritionalInfo | null;

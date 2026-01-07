@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { IngredientsPort, Ingredient, PendingIngredientMatch, IngredientWithNutrition, IngredientNutrition } from '../domain/ports/ingredients.port';
-import type { UsdaPort, UsdaFoodMatch } from '../domain/ports/usda.port';
+import type { IngredientsPort, Ingredient, PendingIngredientMatch, IngredientWithNutrition, IngredientNutrition } from '../../domain/ports/ingredients.port';
+import type { UsdaPort, UsdaFoodMatch } from '../../domain/ports/usda.port';
 
 export interface SearchIngredientResult {
     found: boolean;

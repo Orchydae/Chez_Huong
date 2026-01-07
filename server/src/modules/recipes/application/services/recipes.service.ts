@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { CreateRecipeCommand } from './commands/create-recipe.command';
-import { CreateRecipeHandler } from './commands/create-recipe.handler';
-import { GetRecipesHandler } from './queries/get-recipes.handler';
-import { GetRecipeHandler } from './queries/get-recipe.handler';
-import { Recipe } from '../domain/recipe.entity';
+import { CreateRecipeCommand } from '../commands/create-recipe.command';
+import { CreateRecipeHandler } from '../commands/create-recipe.handler';
+import { GetRecipesHandler } from '../queries/get-recipes.handler';
+import { GetRecipeHandler } from '../queries/get-recipe.handler';
+import { Recipe } from '../../domain/entities/recipe.entity';
 
 @Injectable()
 export class RecipesService {
