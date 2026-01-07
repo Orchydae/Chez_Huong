@@ -57,3 +57,4 @@ export interface UsdaPort {
     getFoodNutrition(fdcId: number): Promise<UsdaNutritionData>;
 }
 
+export const UsdaPort = Symbol('UsdaPort');

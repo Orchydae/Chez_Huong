@@ -1,16 +1,16 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreateRecipeCommand } from './create-recipe.command';
-import { RecipeRepository } from '../../domain/ports/recipe.port';
+import { RecipePort } from '../../domain/ports/recipe.port';
 import { Recipe } from '../../domain/entities/recipe.entity';
-import type { IngredientsPort } from '../../domain/ports/ingredients.port';
+import { IngredientsPort } from '../../domain/ports/ingredients.port';
 
 @Injectable()
 export class CreateRecipeHandler {
     constructor(
-        @Inject(RecipeRepository)
-        private readonly recipeRepository: RecipeRepository,
-        @Inject('IngredientsPort')
-        private readonly ingredientsPort: IngredientsPort,
+        @Inject(RecipePort)
+        private readonly recipeRepository: RecipePort,
+        @Inject(IngredientsPort)
+        private readonly ingredientsRepository: IngredientsPort,
     ) { }
 
     async execute(command: CreateRecipeCommand): Promise<Recipe> {
@@ -20,7 +20,7 @@ export class CreateRecipeHandler {
         );
 
         // Check if all ingredients exist
-        const missingIngredients = await this.ingredientsPort.findMissingIngredients(allIngredientIds);
+        const missingIngredients = await this.ingredientsRepository.findMissingIngredients(allIngredientIds);
 
         if (missingIngredients.length > 0) {
             throw new BadRequestException(

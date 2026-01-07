@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../prisma/prisma.service';
-import type { IngredientsPort, Ingredient, PendingIngredientMatch, IngredientWithNutrition, IngredientNutrition } from '../../../domain/ports/ingredients.port';
+import type { IngredientsPort } from '../../../domain/ports/ingredients.port';
+import type { Ingredient, PendingIngredientMatch, IngredientWithNutrition, IngredientNutrition } from '../../../domain/entities/ingredient.entity';
 import type { UsdaFoodMatch, UsdaNutritionData } from '../../../domain/ports/usda.port';
 
 @Injectable()

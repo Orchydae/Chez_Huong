@@ -4,7 +4,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RecipesController } from './infrastructure/controllers/recipes.controller';
 import { IngredientsController } from './infrastructure/controllers/ingredients.controller';
 import { PrismaModule } from 'src/prisma/prisma.module';
-import { RecipeRepository } from './domain/ports/recipe.port';
+import { RecipePort } from './domain/ports/recipe.port';
+import { IngredientsPort } from './domain/ports/ingredients.port';
 import { PrismaRecipeRepository } from './infrastructure/adapters/persistence/prisma.recipe.repository';
 import { CreateRecipeHandler } from './application/commands/create-recipe.handler';
 import { GetRecipesHandler } from './application/queries/get-recipes.handler';
@@ -13,6 +14,7 @@ import { RecipesService } from './application/services/recipes.service';
 import { IngredientsService } from './application/services/ingredients.service';
 import { PrismaIngredientsRepository } from './infrastructure/adapters/persistence/prisma.ingredients.repository';
 import { UsdaAdapter } from './infrastructure/adapters/external/usda.adapter';
+import { UsdaPort } from './domain/ports/usda.port';
 
 @Module({
     imports: [
@@ -28,15 +30,15 @@ import { UsdaAdapter } from './infrastructure/adapters/external/usda.adapter';
         GetRecipesHandler,
         GetRecipeHandler,
         {
-            provide: RecipeRepository,
+            provide: RecipePort,
             useClass: PrismaRecipeRepository,
         },
         {
-            provide: 'IngredientsPort',
+            provide: IngredientsPort,
             useClass: PrismaIngredientsRepository,
         },
         {
-            provide: 'UsdaPort',
+            provide: UsdaPort,
             useClass: UsdaAdapter,
         },
         {

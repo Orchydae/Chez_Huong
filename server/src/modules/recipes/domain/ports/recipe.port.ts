@@ -12,10 +12,10 @@ export interface IngredientSectionData {
     ingredients: RecipeIngredientData[];
 }
 
-export interface RecipeRepository {
+export interface RecipePort {
     findAll(): Promise<Recipe[]>;
     findById(id: number): Promise<Recipe | null>;
     save(recipe: Recipe, ingredientSections?: IngredientSectionData[]): Promise<Recipe>;
 }
 
-export const RecipeRepository = Symbol('RecipeRepository'); // Token for DI
+export const RecipePort = Symbol('RecipePort'); // Token for DI
