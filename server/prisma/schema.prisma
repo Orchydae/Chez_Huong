@@ -86,10 +86,68 @@ model Step {
 }
 
 model Ingredient {
-  id      Int                @id @default(autoincrement())
-  name    String             @unique
-  fdcId   Int?               @unique // FoodData Central ID (link to USDA)
-  recipes RecipeIngredient[]
+  id        Int                  @id @default(autoincrement())
+  name      String               @unique
+  fdcId     Int?                 @unique // FoodData Central ID (link to USDA)
+  recipes   RecipeIngredient[]
+  nutrition IngredientNutrition?
+}
+
+model IngredientNutrition {
+  id            Int        @id @default(autoincrement())
+  ingredientId  Int        @unique
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  // Per 100g values (USDA standard)
+  servingSize   Float? // in grams
+
+  // Macronutrients
+  calories      Float? // kcal
+  protein       Float? // g
+  carbohydrates Float? // g
+  fiber         Float? // g
+  sugar         Float? // g
+
+  // Fats (detailed breakdown)
+  totalFat      Float? // g
+  saturatedFat  Float? // g
+  monounsatFat  Float? // g (monounsaturated)
+  polyunsatFat  Float? // g (polyunsaturated)
+  transFat      Float? // g
+  cholesterol   Float? // mg
+
+  // Minerals
+  sodium        Float? // mg
+  potassium     Float? // mg
+  calcium       Float? // mg
+  iron          Float? // mg
+  magnesium     Float? // mg
+  zinc          Float? // mg
+
+  // Vitamins
+  vitaminA      Float? // mcg (RAE)
+  vitaminC      Float? // mg
+  vitaminD      Float? // mcg
+  vitaminE      Float? // mg
+  vitaminK      Float? // mcg
+  vitaminB6     Float? // mg
+  vitaminB12    Float? // mcg
+  folate        Float? // mcg
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PendingIngredientMatch {
+  id          Int      @id @default(autoincrement())
+  searchQuery String   // The original search term
+  fdcId       Int      // USDA FoodData Central ID
+  name        String   // Food name from USDA
+  description String?  // Additional description from USDA
+  dataType    String?  // e.g., "Foundation", "SR Legacy", "Branded"
+  createdAt   DateTime @default(now())
+
+  @@index([searchQuery])
 }
 
 model RecipeIngredient {
@@ -126,11 +184,45 @@ model Comment {
 
 model NutritionalInfo {
   id            Int    @id @default(autoincrement())
-  calories      Int
-  protein       Int
-  fat           Int
-  carbohydrates Int
-
   recipeId      Int    @unique
   recipe        Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  // Per serving values
+  servingSize   Float? // in grams
+
+  // Macronutrients
+  calories      Float? // kcal
+  protein       Float? // g
+  carbohydrates Float? // g
+  fiber         Float? // g
+  sugar         Float? // g
+
+  // Fats (detailed breakdown)
+  totalFat      Float? // g
+  saturatedFat  Float? // g
+  monounsatFat  Float? // g (monounsaturated)
+  polyunsatFat  Float? // g (polyunsaturated)
+  transFat      Float? // g
+  cholesterol   Float? // mg
+
+  // Minerals
+  sodium        Float? // mg
+  potassium     Float? // mg
+  calcium       Float? // mg
+  iron          Float? // mg
+  magnesium     Float? // mg
+  zinc          Float? // mg
+
+  // Vitamins
+  vitaminA      Float? // mcg (RAE)
+  vitaminC      Float? // mg
+  vitaminD      Float? // mcg
+  vitaminE      Float? // mg
+  vitaminK      Float? // mcg
+  vitaminB6     Float? // mg
+  vitaminB12    Float? // mcg
+  folate        Float? // mcg
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

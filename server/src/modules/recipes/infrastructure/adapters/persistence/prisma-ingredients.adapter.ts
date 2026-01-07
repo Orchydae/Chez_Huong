@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../prisma/prisma.service';
-import type { IngredientsPort } from '../../../domain/ports/ingredients.port';
+import type { IngredientsPort, Ingredient, PendingIngredientMatch, IngredientWithNutrition, IngredientNutrition } from '../../../domain/ports/ingredients.port';
+import type { UsdaFoodMatch, UsdaNutritionData } from '../../../domain/ports/usda.port';
 
 @Injectable()
 export class PrismaIngredientsAdapter implements IngredientsPort {
     constructor(private readonly prisma: PrismaService) { }
 
     async findMissingIngredients(ingredientIds: number[]): Promise<number[]> {
-        // Find all ingredients that exist
         const existingIngredients = await this.prisma.ingredient.findMany({
             where: {
                 id: {
@@ -20,8 +20,167 @@ export class PrismaIngredientsAdapter implements IngredientsPort {
         });
 
         const existingIds = new Set(existingIngredients.map(i => i.id));
-
-        // Return IDs that don't exist
         return ingredientIds.filter(id => !existingIds.has(id));
     }
+
+    async findByName(name: string): Promise<Ingredient | null> {
+        const ingredient = await this.prisma.ingredient.findFirst({
+            where: {
+                name: {
+                    equals: name,
+                    mode: 'insensitive',
+                },
+            },
+        });
+
+        return ingredient;
+    }
+
+    async findByFdcId(fdcId: number): Promise<Ingredient | null> {
+        const ingredient = await this.prisma.ingredient.findUnique({
+            where: { fdcId },
+        });
+
+        return ingredient;
+    }
+
+    async create(name: string, fdcId?: number): Promise<Ingredient> {
+        const ingredient = await this.prisma.ingredient.create({
+            data: {
+                name,
+                fdcId: fdcId ?? null,
+            },
+        });
+
+        return ingredient;
+    }
+
+    async findAll(): Promise<Ingredient[]> {
+        return this.prisma.ingredient.findMany({
+            orderBy: { name: 'asc' },
+        });
+    }
+
+    async findAllWithNutrition(): Promise<IngredientWithNutrition[]> {
+        const ingredients = await this.prisma.ingredient.findMany({
+            include: {
+                nutrition: true,
+            },
+            orderBy: { name: 'asc' },
+        });
+
+        return ingredients;
+    }
+
+    async findByIdWithNutrition(id: number): Promise<IngredientWithNutrition | null> {
+        const ingredient = await this.prisma.ingredient.findUnique({
+            where: { id },
+            include: {
+                nutrition: true,
+            },
+        });
+
+        return ingredient;
+    }
+
+    async saveNutrition(ingredientId: number, nutrition: UsdaNutritionData): Promise<IngredientNutrition> {
+        const saved = await this.prisma.ingredientNutrition.upsert({
+            where: { ingredientId },
+            update: {
+                servingSize: 100, // USDA data is per 100g
+                calories: nutrition.calories ?? null,
+                protein: nutrition.protein ?? null,
+                carbohydrates: nutrition.carbohydrates ?? null,
+                fiber: nutrition.fiber ?? null,
+                sugar: nutrition.sugar ?? null,
+                totalFat: nutrition.totalFat ?? null,
+                saturatedFat: nutrition.saturatedFat ?? null,
+                monounsatFat: nutrition.monounsatFat ?? null,
+                polyunsatFat: nutrition.polyunsatFat ?? null,
+                transFat: nutrition.transFat ?? null,
+                cholesterol: nutrition.cholesterol ?? null,
+                sodium: nutrition.sodium ?? null,
+                potassium: nutrition.potassium ?? null,
+                calcium: nutrition.calcium ?? null,
+                iron: nutrition.iron ?? null,
+                magnesium: nutrition.magnesium ?? null,
+                zinc: nutrition.zinc ?? null,
+                vitaminA: nutrition.vitaminA ?? null,
+                vitaminC: nutrition.vitaminC ?? null,
+                vitaminD: nutrition.vitaminD ?? null,
+                vitaminE: nutrition.vitaminE ?? null,
+                vitaminK: nutrition.vitaminK ?? null,
+                vitaminB6: nutrition.vitaminB6 ?? null,
+                vitaminB12: nutrition.vitaminB12 ?? null,
+                folate: nutrition.folate ?? null,
+            },
+            create: {
+                ingredientId,
+                servingSize: 100, // USDA data is per 100g
+                calories: nutrition.calories ?? null,
+                protein: nutrition.protein ?? null,
+                carbohydrates: nutrition.carbohydrates ?? null,
+                fiber: nutrition.fiber ?? null,
+                sugar: nutrition.sugar ?? null,
+                totalFat: nutrition.totalFat ?? null,
+                saturatedFat: nutrition.saturatedFat ?? null,
+                monounsatFat: nutrition.monounsatFat ?? null,
+                polyunsatFat: nutrition.polyunsatFat ?? null,
+                transFat: nutrition.transFat ?? null,
+                cholesterol: nutrition.cholesterol ?? null,
+                sodium: nutrition.sodium ?? null,
+                potassium: nutrition.potassium ?? null,
+                calcium: nutrition.calcium ?? null,
+                iron: nutrition.iron ?? null,
+                magnesium: nutrition.magnesium ?? null,
+                zinc: nutrition.zinc ?? null,
+                vitaminA: nutrition.vitaminA ?? null,
+                vitaminC: nutrition.vitaminC ?? null,
+                vitaminD: nutrition.vitaminD ?? null,
+                vitaminE: nutrition.vitaminE ?? null,
+                vitaminK: nutrition.vitaminK ?? null,
+                vitaminB6: nutrition.vitaminB6 ?? null,
+                vitaminB12: nutrition.vitaminB12 ?? null,
+                folate: nutrition.folate ?? null,
+            },
+        });
+
+        return saved;
+    }
+
+    async savePendingMatches(query: string, matches: UsdaFoodMatch[]): Promise<void> {
+        // Clear any existing matches for this query first
+        await this.clearPendingMatches(query);
+
+        // Insert new matches
+        await this.prisma.pendingIngredientMatch.createMany({
+            data: matches.map(match => ({
+                searchQuery: query.toLowerCase(),
+                fdcId: match.fdcId,
+                name: match.name,
+                description: match.description ?? null,
+                dataType: match.dataType ?? null,
+            })),
+        });
+    }
+
+    async getPendingMatches(query: string): Promise<PendingIngredientMatch[]> {
+        const matches = await this.prisma.pendingIngredientMatch.findMany({
+            where: {
+                searchQuery: query.toLowerCase(),
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        return matches;
+    }
+
+    async clearPendingMatches(query: string): Promise<void> {
+        await this.prisma.pendingIngredientMatch.deleteMany({
+            where: {
+                searchQuery: query.toLowerCase(),
+            },
+        });
+    }
 }
+

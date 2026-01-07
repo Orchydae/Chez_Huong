@@ -31,8 +31,11 @@ export class RecipesController {
                         )
                     )
                 )
-            )
+            ),
+            dto.nutritionalInfo
         );
+
+
 
         return this.recipesService.create(command);
     }

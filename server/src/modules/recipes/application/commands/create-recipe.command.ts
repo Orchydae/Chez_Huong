@@ -1,3 +1,5 @@
+import type { NutritionalInfo } from '../../domain/recipe.entity';
+
 export class RecipeIngredientData {
     constructor(
         public readonly ingredientId: number,
@@ -25,5 +27,7 @@ export class CreateRecipeCommand {
         public readonly servings: number,
         public readonly authorId: string,
         public readonly ingredientSections: IngredientSectionData[],
+        public readonly nutritionalInfo?: NutritionalInfo,
     ) { }
 }
+

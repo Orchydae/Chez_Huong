@@ -54,6 +54,40 @@ export class PrismaRecipeRepository implements RecipeRepository {
             };
         }
 
+        // Add nutritionalInfo if provided
+        if (recipe.nutritionalInfo) {
+            data.nutritionalInfo = {
+                create: {
+                    calories: recipe.nutritionalInfo.calories,
+                    protein: recipe.nutritionalInfo.protein,
+                    carbohydrates: recipe.nutritionalInfo.carbohydrates,
+                    fiber: recipe.nutritionalInfo.fiber,
+                    sugar: recipe.nutritionalInfo.sugar,
+                    totalFat: recipe.nutritionalInfo.totalFat,
+                    saturatedFat: recipe.nutritionalInfo.saturatedFat,
+                    monounsatFat: recipe.nutritionalInfo.monounsatFat,
+                    polyunsatFat: recipe.nutritionalInfo.polyunsatFat,
+                    transFat: recipe.nutritionalInfo.transFat,
+                    cholesterol: recipe.nutritionalInfo.cholesterol,
+                    sodium: recipe.nutritionalInfo.sodium,
+                    potassium: recipe.nutritionalInfo.potassium,
+                    calcium: recipe.nutritionalInfo.calcium,
+                    iron: recipe.nutritionalInfo.iron,
+                    magnesium: recipe.nutritionalInfo.magnesium,
+                    zinc: recipe.nutritionalInfo.zinc,
+                    vitaminA: recipe.nutritionalInfo.vitaminA,
+                    vitaminC: recipe.nutritionalInfo.vitaminC,
+                    vitaminD: recipe.nutritionalInfo.vitaminD,
+                    vitaminE: recipe.nutritionalInfo.vitaminE,
+                    vitaminK: recipe.nutritionalInfo.vitaminK,
+                    vitaminB6: recipe.nutritionalInfo.vitaminB6,
+                    vitaminB12: recipe.nutritionalInfo.vitaminB12,
+                    folate: recipe.nutritionalInfo.folate,
+                }
+            };
+        }
+
+
         const saved = await this.prisma.recipe.create({ data });
         return RecipeMapper.toDomain(saved);
     }

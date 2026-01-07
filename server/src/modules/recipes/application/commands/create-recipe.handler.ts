@@ -39,8 +39,10 @@ export class CreateRecipeHandler {
             command.type,
             command.cuisine,
             command.servings,
-            command.authorId
+            command.authorId,
+            command.nutritionalInfo
         );
+
 
         // Save recipe with ingredient sections
         // Note: Repository needs to be updated to handle ingredient sections
