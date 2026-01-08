@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { RecipePort, IngredientSectionData } from '../../../domain/ports/recipe.port';
+import { IRecipesRepository, IngredientSectionData } from '../../../domain/ports/recipe.port';
 import { Recipe } from '../../../domain/entities/recipe.entity';
 import { RecipeMapper } from './recipe.mapper';
 
 
 @Injectable()
-export class PrismaRecipeRepository implements RecipePort {
+export class PrismaRecipeRepository implements IRecipesRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     async findAll(): Promise<Recipe[]> {

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../prisma/prisma.service';
-import type { IngredientsPort } from '../../../domain/ports/ingredients.port';
+import type { IIngredientsRepository } from '../../../domain/ports/ingredients.port';
 import type { Ingredient, PendingIngredientMatch, IngredientWithNutrition, IngredientNutrition } from '../../../domain/entities/ingredient.entity';
 import type { UsdaFoodMatch, UsdaNutritionData } from '../../../domain/ports/usda.port';
 
 @Injectable()
-export class PrismaIngredientsRepository implements IngredientsPort {
+export class PrismaIngredientsRepository implements IIngredientsRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     async findMissingIngredients(ingredientIds: number[]): Promise<number[]> {

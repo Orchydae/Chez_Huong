@@ -1,6 +1,6 @@
 // NOTE TO MYSELF: a controller should only handle request/response and delegate all business logic to the service layer.
 import { Controller, Get, Query } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { UsersService } from '../../application/services/users.service';
 
 @Controller('users')
 export class UsersController {

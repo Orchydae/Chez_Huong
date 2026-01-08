@@ -6,7 +6,7 @@ import type {
     PendingIngredientMatch,
 } from '../entities/ingredient.entity';
 
-export interface IngredientsPort {
+export interface IIngredientsRepository {
     /**
      * Check if all ingredient IDs exist in the database
      * @param ingredientIds - Array of ingredient IDs to verify
@@ -65,4 +65,4 @@ export interface IngredientsPort {
     clearPendingMatches(query: string): Promise<void>;
 }
 
-export const IngredientsPort = Symbol('IngredientsPort');
+export const IIngredientsRepository = Symbol('IIngredientsRepository');

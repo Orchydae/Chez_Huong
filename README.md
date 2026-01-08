@@ -84,3 +84,28 @@ At this point, we apply the same logic for the users as to the module, service a
 
 ## Authentication & JWT
 ### Visit [Authentication | NestJS](https://docs.nestjs.com/security/authentication) documentation
+
+---
+
+## Docker (Dev Mode)
+
+To run the application in development mode using Docker:
+
+1. Navigate to the `server` directory:
+   ```bash
+   cd server
+   ```
+
+2. Start the container with the development configuration:
+   ```bash
+   docker-compose -f docker-compose.dev.yml up --build -d
+   ```
+   
+   - The API will be available at `http://localhost:3000`
+   - Prisma Studio will be available at `http://localhost:5555`
+   - The database is persisted in a docker volume
+
+3. To stop the application and remove containers (resets the app):
+   ```bash
+   docker-compose -f docker-compose.dev.yml down
+   ```

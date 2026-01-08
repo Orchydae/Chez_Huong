@@ -1,16 +1,16 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreateRecipeCommand } from './create-recipe.command';
-import { RecipePort } from '../../domain/ports/recipe.port';
+import { IRecipesRepository } from '../../domain/ports/recipe.port';
 import { Recipe } from '../../domain/entities/recipe.entity';
-import { IngredientsPort } from '../../domain/ports/ingredients.port';
+import { IIngredientsRepository } from '../../domain/ports/ingredients.port';
 
 @Injectable()
 export class CreateRecipeHandler {
     constructor(
-        @Inject(RecipePort)
-        private readonly recipeRepository: RecipePort,
-        @Inject(IngredientsPort)
-        private readonly ingredientsRepository: IngredientsPort,
+        @Inject(IRecipesRepository)
+        private readonly recipeRepository: IRecipesRepository,
+        @Inject(IIngredientsRepository)
+        private readonly ingredientsRepository: IIngredientsRepository,
     ) { }
 
     async execute(command: CreateRecipeCommand): Promise<Recipe> {

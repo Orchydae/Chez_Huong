@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { IngredientsPort } from '../../domain/ports/ingredients.port';
+import { IIngredientsRepository } from '../../domain/ports/ingredients.port';
 import type { Ingredient, PendingIngredientMatch, IngredientWithNutrition, IngredientNutrition } from '../../domain/entities/ingredient.entity';
 import { UsdaPort } from '../../domain/ports/usda.port';
 import type { UsdaFoodMatch } from '../../domain/ports/usda.port';
@@ -13,8 +13,8 @@ export interface SearchIngredientResult {
 @Injectable()
 export class IngredientsService {
     constructor(
-        @Inject(IngredientsPort) private readonly ingredientsRepository: IngredientsPort,
-        @Inject(UsdaPort) private readonly usdaPort: UsdaPort,
+        @Inject(IIngredientsRepository) private readonly ingredientsRepository: IIngredientsRepository,
+        @Inject(UsdaPort) private readonly usdaRepository: UsdaPort,
     ) { }
 
     /**
@@ -33,7 +33,7 @@ export class IngredientsService {
         }
 
         // Not in DB, search USDA
-        const usdaMatches = await this.usdaPort.searchFoods(query, 50);
+        const usdaMatches = await this.usdaRepository.searchFoods(query, 50);
 
         if (usdaMatches.length === 0) {
             return {
@@ -77,7 +77,7 @@ export class IngredientsService {
 
         // Fetch and save nutrition
         try {
-            const nutritionData = await this.usdaPort.getFoodNutrition(fdcId);
+            const nutritionData = await this.usdaRepository.getFoodNutrition(fdcId);
             nutrition = await this.ingredientsRepository.saveNutrition(ingredient.id, nutritionData);
         } catch (error) {
             console.error(`Failed to fetch/save nutrition for FDC ID ${fdcId}:`, error);

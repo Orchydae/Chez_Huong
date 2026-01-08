@@ -4,8 +4,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RecipesController } from './infrastructure/controllers/recipes.controller';
 import { IngredientsController } from './infrastructure/controllers/ingredients.controller';
 import { PrismaModule } from 'src/prisma/prisma.module';
-import { RecipePort } from './domain/ports/recipe.port';
-import { IngredientsPort } from './domain/ports/ingredients.port';
+import { IRecipesRepository } from './domain/ports/recipe.port';
+import { IIngredientsRepository } from './domain/ports/ingredients.port';
 import { PrismaRecipeRepository } from './infrastructure/adapters/persistence/prisma.recipe.repository';
 import { CreateRecipeHandler } from './application/commands/create-recipe.handler';
 import { GetRecipesHandler } from './application/queries/get-recipes.handler';
@@ -30,11 +30,11 @@ import { UsdaPort } from './domain/ports/usda.port';
         GetRecipesHandler,
         GetRecipeHandler,
         {
-            provide: RecipePort,
+            provide: IRecipesRepository,
             useClass: PrismaRecipeRepository,
         },
         {
-            provide: IngredientsPort,
+            provide: IIngredientsRepository,
             useClass: PrismaIngredientsRepository,
         },
         {
