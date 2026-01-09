@@ -1,0 +1,33 @@
+@startuml 
+title Chez Huong — Deployment Diagram (Modular Monolith)
+
+skinparam defaultFontName Monospace
+
+node "Client Container" as Client {
+    [client.js]
+}
+
+node "Chez Huong Container" as Server {
+    component "Chez Huong Server" {
+        component "Auth Module" as AuthModule
+        component "Users Module" as UsersModule
+        component "Recipes Module" as RecipesModule
+        component "Social & Interactions Module" as SocialModule
+        component "Analyse nutritionnelle Module" as NutritionModule
+        component "Observabilité & Surveillance Module" as ObservabilityModule
+
+        AuthModule --> UsersModule
+        UsersModule --> RecipesModule
+        UsersModule --> SocialModule
+        SocialModule --> RecipesModule
+        RecipesModule --> NutritionModule
+    }
+}
+
+database "Supabase DB" as Supabase
+
+' === RELATIONS ===
+Client --> Server: HTTPS / JSON
+Server <--> Supabase : DB / SQL
+
+@enduml
