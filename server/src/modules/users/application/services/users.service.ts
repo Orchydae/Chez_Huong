@@ -12,4 +12,12 @@ export class UsersService {
     async getAll(take: number, skip: number): Promise<User[]> {
         return this.usersRepository.getAll(take, skip);
     }
+
+    async findByEmail(email: string): Promise<User | null> {
+        return this.usersRepository.findByEmail(email);
+    }
+
+    async create(data: any): Promise<User> {
+        return this.usersRepository.create(data);
+    }
 }

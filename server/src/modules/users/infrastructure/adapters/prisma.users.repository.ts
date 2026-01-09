@@ -24,4 +24,24 @@ export class PrismaUsersRepository implements IUsersRepository {
             orderBy: { id: 'asc' },
         }) as unknown as User[];
     }
+
+    async findByEmail(email: string): Promise<User | null> {
+        return this.prisma.user.findUnique({
+            where: { email },
+            select: {
+                ...userListInput,
+                password: true, // We need the password for auth validation
+            },
+        }) as unknown as User;
+    }
+
+    async create(data: any): Promise<User> {
+        return this.prisma.user.create({
+            data: {
+                ...data,
+                role: 'Reader', // Default role
+            },
+            select: userListInput,
+        }) as unknown as User;
+    }
 }

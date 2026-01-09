@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { RecipesController } from './infrastructure/controllers/recipes.controller';
 import { IngredientsController } from './infrastructure/controllers/ingredients.controller';
 import { PrismaModule } from 'src/prisma/prisma.module';
@@ -20,7 +20,6 @@ import { UsdaPort } from './domain/ports/usda.port';
     imports: [
         PrismaModule,
         HttpModule,
-        ConfigModule,
     ],
     controllers: [RecipesController, IngredientsController],
     providers: [
