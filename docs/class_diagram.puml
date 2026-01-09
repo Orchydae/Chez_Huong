@@ -4,24 +4,6 @@ title Chez Huong — Class Diagram
 skinparam componentStyle rectangle
 skinparam defaultFontName Monospace
 
-enum Role {
-    "ADMIN"
-    "WRITER"
-    "READER"
-}
-
-enum Difficulty {
-    "EASY"
-    "MEDIUM"
-    "HARD"
-}
-
-enum RecipeType {
-    "ENTREE"
-    "MAIN"
-    "DESSERT"
-}
-
 class Utilisateur {
     +nom: string
     +prenom: string
@@ -65,7 +47,6 @@ class Ingredient {
 }
 
 class RecipeIngredient {
-    +section: IngredientSection
     +ingredient: Ingredient
     +quantite: string
     +unit: string
@@ -92,15 +73,12 @@ class CalculNutritionnel {
 }
 
 Utilisateur "1" --> "*" Recette: Consulte/Écrit/Modifie
-Utilisateur "*" --> "1" Role: Détient
 
 Recette "1" --> "*" IngredientSection: Contient
 IngredientSection "1" --> "*" RecipeIngredient: Contient
 RecipeIngredient "*" --> "1" Ingredient: Est défini par
 
 Recette "*" --> "*" Particularite: Possède
-Recette --> Difficulty
-Recette --> RecipeType
 
 Recette "1" --> "1" CalculNutritionnel: Analyse
 Recette "1" <-- "*" Like: Concerne

@@ -1,0 +1,106 @@
+@startuml 
+title Chez Huong — Package Diagram
+
+skinparam defaultFontName Monospace
+
+package "Recipes Module" as Recipes {
+    package "Application Layer" as RAL {
+        package "Commands" as RecipesCommands {
+            [CreateRecipeHandler]
+        }
+        package "Queries" as RecipesQueries {
+            [GetRecipeHandler]
+            [GetRecipesHandler]
+        }
+        package "Services" {
+            [RecipesService]
+            [IngredientService]
+        }
+    }
+
+    package "Domain Layer" as RDL {
+        package "Entities" {
+            [Recipe]
+            [Ingredient]
+        }
+        package "Ports" {
+            [IRecipesRepository]
+            [IIngredientRepository]
+            [USDAPort]
+        }
+    }
+
+    package "Infrastructure Layer" as RIL {
+        package "Adapters" {
+            package "Persistence" {
+                [PrismaRecipesRepository]
+                [PrismaIngredientRepository]
+                [RecipeMapper]
+            }
+            package "External" {
+                [USDAAdapter]
+            }
+        }
+        package "Controllers" {
+            [RecipesController]
+            [IngredientController]
+
+            package "DTOs" {
+                [CreateRecipeDTO]
+            }
+        }
+    }
+
+    ' Internal flows
+    RAL --> RDL: depends on
+    RIL --> RAL: triggers
+    RIL --> RDL: implements ports
+
+    RecipesController --> RecipesService: uses
+    RecipesService --> RecipesCommands: triggers
+    RecipesService --> RecipesQueries: triggers
+    RecipesCommands --> IRecipesRepository : depends on
+    RecipesQueries --> IRecipesRepository : depends on
+    PrismaRecipesRepository ..|> IRecipesRepository: implements (realizes)
+    USDAAdapter ..|> USDAPort: implements (realizes)
+}
+
+package "Users Module" as Users {
+    package "Application Layer" {
+        rectangle "UserService" as UserService
+    }
+
+    package "Domain Layer" {
+        rectangle "..." as ddots
+    }
+
+    package "Infrastructure Layer" {
+        rectangle "..." as idots
+    }
+}
+
+package "Auth Module" as Auth {
+    package "Guards" as AuthGuards{
+        [LocalAuthGuard]
+        [JwtAuthGuard]
+    }
+
+    package "Strategies" as AuthStrategies {
+        [LocalStrategy]
+        [JwtStrategy]
+    }
+
+    component "AuthController" as AuthController
+    component "AuthService" as AuthService
+
+    AuthController --> AuthGuards:  uses
+    AuthController --> AuthService: uses
+    AuthService --> UserService: uses
+    AuthGuards --> AuthStrategies: extends
+}
+
+' Dependencies
+Users --> Recipes: Read/Write
+
+
+@enduml

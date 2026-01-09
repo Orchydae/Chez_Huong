@@ -4,13 +4,21 @@ title Chez Huong — Bounded Context (DDD)
 skinparam componentStyle rectangle
 skinparam defaultFontName Monospace
 
-package "Identity & Access" as IAM {
-    rectangle Utilisateur
+package "Authentication" as AuthContext {
+    rectangle AuthService
+    rectangle Strategies
 }
 
-package "Gestion des recettes" as GR {
-    rectangle Recette
+package "Users" as UsersContext {
+    rectangle User
+    rectangle UsersService
+}
+
+package "Gestion des recettes" as RecipesContext {
+    rectangle Recipe
     rectangle Ingredient
+    rectangle RecipesService
+    rectangle IngredientsService
 }
 
 package "Social & Interactions" as SI {
@@ -29,10 +37,15 @@ package "Observabilité & Surveillance" as OS {
 
 ' === LIENS ENTRE BOUNDED CONTEXTS ===
 
-Utilisateur --> Recette: Consulte/Écrit/Modifie
-Utilisateur <-- OS: Logs
-SI --> Recette: Concerne
-Recette <-- AN: Analyse
+AuthContext --> UsersContext: Verifies Credentials
+RecipesContext --> UsersContext: Author Ref
+RecipesContext ..> AN: Uses (USDA/Nutrition)
 
+User -- RecipesContext: Create/Read
+User -- AuthContext: Login/Register
+
+SI --> RecipesContext: Concerne
+RecipesContext <-- AN: Analyse
+UsersContext <-- OS: Logs
 
 @enduml
