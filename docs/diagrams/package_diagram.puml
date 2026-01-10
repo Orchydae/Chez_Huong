@@ -15,6 +15,7 @@ package "Recipes Module" as Recipes {
         package "Services" {
             [RecipesService]
             [IngredientService]
+            [NutritionalValueService]
         }
     }
 
@@ -57,6 +58,7 @@ package "Recipes Module" as Recipes {
     RIL --> RDL: implements ports
 
     RecipesController --> RecipesService: uses
+    RecipesController <-- NutritionalValueService: calculates
     RecipesService --> RecipesCommands: triggers
     RecipesService --> RecipesQueries: triggers
     RecipesCommands --> IRecipesRepository : depends on
@@ -83,11 +85,16 @@ package "Auth Module" as Auth {
     package "Guards" as AuthGuards{
         [LocalAuthGuard]
         [JwtAuthGuard]
+        [RolesGuard]
     }
 
     package "Strategies" as AuthStrategies {
         [LocalStrategy]
         [JwtStrategy]
+    }
+
+    package "Decorators" as AuthDecorators {
+        [RolesDecorator]
     }
 
     component "AuthController" as AuthController
@@ -97,6 +104,7 @@ package "Auth Module" as Auth {
     AuthController --> AuthService: uses
     AuthService --> UserService: uses
     AuthGuards --> AuthStrategies: extends
+    AuthDecorators --> AuthGuards: sets the metadata
 }
 
 ' Dependencies

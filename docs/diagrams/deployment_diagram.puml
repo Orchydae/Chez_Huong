@@ -13,14 +13,12 @@ node "Chez Huong Container" as Server {
         component "Users Module" as UsersModule
         component "Recipes Module" as RecipesModule
         component "Social & Interactions Module" as SocialModule
-        component "Analyse nutritionnelle Module" as NutritionModule
         component "Observabilité & Surveillance Module" as ObservabilityModule
 
         AuthModule --> UsersModule
         UsersModule --> RecipesModule
         UsersModule --> SocialModule
         SocialModule --> RecipesModule
-        RecipesModule --> NutritionModule
     }
 }
 
