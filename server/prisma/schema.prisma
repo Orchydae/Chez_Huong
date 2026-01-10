@@ -14,6 +14,23 @@ enum Role {
   READER
 }
 
+enum ParticularityType {
+  VEGETARIAN
+  VEGAN
+  GLUTEN_FREE
+  DAIRY_FREE
+  NUT_FREE
+  EGG_FREE
+  SEAFOOD_FREE
+  SOY_FREE
+  HALAL
+  KOSHER
+  LOW_SODIUM
+  LOW_SUGAR
+  LOW_CARB
+  HIGH_PROTEIN
+}
+
 model User {
   id        String   @id @default(uuid())
   firstName String
@@ -70,9 +87,12 @@ model IngredientSection {
 }
 
 model Particularity {
-  id      Int      @id @default(autoincrement())
-  name    String   @unique // e.g., "Vegan", "No Nuts"
-  recipes Recipe[]
+  id       Int               @id @default(autoincrement())
+  recipeId Int
+  recipe   Recipe            @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  type     ParticularityType
+
+  @@unique([recipeId, type])
 }
 
 model Step {

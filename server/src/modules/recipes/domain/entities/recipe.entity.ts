@@ -27,6 +27,26 @@ export interface NutritionalInfo {
 }
 
 
+/**
+ * Fixed dietary restriction/particularity types
+ */
+export enum ParticularityType {
+    VEGETARIAN = 'VEGETARIAN',
+    VEGAN = 'VEGAN',
+    GLUTEN_FREE = 'GLUTEN_FREE',
+    DAIRY_FREE = 'DAIRY_FREE',
+    NUT_FREE = 'NUT_FREE',
+    EGG_FREE = 'EGG_FREE',
+    SEAFOOD_FREE = 'SEAFOOD_FREE',
+    SOY_FREE = 'SOY_FREE',
+    HALAL = 'HALAL',
+    KOSHER = 'KOSHER',
+    LOW_SODIUM = 'LOW_SODIUM',
+    LOW_SUGAR = 'LOW_SUGAR',
+    LOW_CARB = 'LOW_CARB',
+    HIGH_PROTEIN = 'HIGH_PROTEIN',
+}
+
 export class Recipe {
     constructor(
         public id: number,
@@ -40,6 +60,7 @@ export class Recipe {
         public servings: number,
         public authorId: string,
         public nutritionalInfo?: NutritionalInfo | null,
+        public particularities?: ParticularityType[],
     ) { }
 }
 

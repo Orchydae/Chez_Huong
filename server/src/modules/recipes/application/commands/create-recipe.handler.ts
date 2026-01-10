@@ -40,7 +40,8 @@ export class CreateRecipeHandler {
             command.cuisine,
             command.servings,
             command.authorId,
-            command.nutritionalInfo
+            command.nutritionalInfo,
+            command.particularities
         );
 
 

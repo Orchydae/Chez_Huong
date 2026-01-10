@@ -87,6 +87,15 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             };
         }
 
+        // Add particularities if provided
+        if (recipe.particularities && recipe.particularities.length > 0) {
+            data.particularities = {
+                create: recipe.particularities.map(type => ({
+                    type: type,
+                }))
+            };
+        }
+
 
         const saved = await this.prisma.recipe.create({ data });
         return RecipeMapper.toDomain(saved);

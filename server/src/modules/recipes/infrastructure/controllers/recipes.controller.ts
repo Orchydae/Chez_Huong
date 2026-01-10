@@ -36,7 +36,8 @@ export class RecipesController {
                     )
                 )
             ),
-            dto.nutritionalInfo
+            dto.nutritionalInfo,
+            dto.particularities
         );
 
 

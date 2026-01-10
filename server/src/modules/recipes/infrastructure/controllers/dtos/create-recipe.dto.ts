@@ -1,6 +1,7 @@
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested, ArrayMinSize, IsObject } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested, ArrayMinSize, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateIngredientSectionDto } from './create-ingredient-section.dto';
+import { ParticularityType } from '../../../domain/entities/recipe.entity';
 
 export class NutritionalInfoDto {
     @IsNumber() @IsOptional() calories?: number;
@@ -77,5 +78,10 @@ export class CreateRecipeDto {
     @ValidateNested()
     @Type(() => NutritionalInfoDto)
     nutritionalInfo?: NutritionalInfoDto;
+
+    @IsOptional()
+    @IsArray()
+    @IsEnum(ParticularityType, { each: true })
+    particularities?: ParticularityType[];
 }
 

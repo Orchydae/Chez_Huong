@@ -1,4 +1,4 @@
-import type { NutritionalInfo } from '../../domain/entities/recipe.entity';
+import type { NutritionalInfo, ParticularityType } from '../../domain/entities/recipe.entity';
 
 export class RecipeIngredientData {
     constructor(
@@ -28,6 +28,7 @@ export class CreateRecipeCommand {
         public readonly authorId: string,
         public readonly ingredientSections: IngredientSectionData[],
         public readonly nutritionalInfo?: NutritionalInfo,
+        public readonly particularities?: ParticularityType[],
     ) { }
 }
 
