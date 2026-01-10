@@ -6,7 +6,7 @@ import type { UsdaFoodMatch } from '../../domain/ports/usda.port';
 
 export interface SearchIngredientResult {
     found: boolean;
-    ingredient?: Ingredient;
+    ingredients?: Ingredient[];
     matches?: UsdaFoodMatch[];
 }
 
@@ -18,32 +18,46 @@ export class IngredientsService {
     ) { }
 
     /**
-     * Search for an ingredient by name.
-     * If found in DB, returns it. Otherwise searches USDA and returns matches.
+     * Search for ingredients in the local database (partial match).
+     * @returns Array of matching ingredients
+     */
+    async searchDatabase(query: string, limit = 50): Promise<Ingredient[]> {
+        return this.ingredientsRepository.searchByName(query, limit);
+    }
+
+    /**
+     * Search for ingredients in the USDA FoodData Central database.
+     * Also saves matches as pending for later confirmation.
+     * @returns Array of USDA food matches
+     */
+    async searchUsda(query: string, maxResults = 50): Promise<UsdaFoodMatch[]> {
+        const usdaMatches = await this.usdaRepository.searchFoods(query, maxResults);
+
+        if (usdaMatches.length > 0) {
+            // Save matches for later confirmation
+            await this.ingredientsRepository.savePendingMatches(query, usdaMatches);
+        }
+
+        return usdaMatches;
+    }
+
+    /**
+     * Search for an ingredient - checks local DB first, then USDA.
+     * @deprecated Consider using searchDatabase() and searchUsda() separately for more control
      */
     async searchIngredient(query: string): Promise<SearchIngredientResult> {
         // First check if ingredient exists in our database
-        const existingIngredient = await this.ingredientsRepository.findByName(query);
+        const existingIngredients = await this.searchDatabase(query);
 
-        if (existingIngredient) {
+        if (existingIngredients.length > 0) {
             return {
                 found: true,
-                ingredient: existingIngredient,
+                ingredients: existingIngredients,
             };
         }
 
         // Not in DB, search USDA
-        const usdaMatches = await this.usdaRepository.searchFoods(query, 50);
-
-        if (usdaMatches.length === 0) {
-            return {
-                found: false,
-                matches: [],
-            };
-        }
-
-        // Save matches for later confirmation
-        await this.ingredientsRepository.savePendingMatches(query, usdaMatches);
+        const usdaMatches = await this.searchUsda(query);
 
         return {
             found: false,
@@ -53,7 +67,7 @@ export class IngredientsService {
 
     /**
      * Confirm and create an ingredient from a USDA match.
-     * Also fetches and saves nutritional information.
+     * Also fetches and saves nutritional information and portion data.
      */
     async confirmIngredient(fdcId: number, name: string): Promise<IngredientWithNutrition> {
         // Check if ingredient with this fdcId already exists
@@ -82,6 +96,17 @@ export class IngredientsService {
         } catch (error) {
             console.error(`Failed to fetch/save nutrition for FDC ID ${fdcId}:`, error);
             // Non-critical failure, continue without nutrition
+        }
+
+        // Fetch and save portion data for unit-to-gram conversions
+        try {
+            const portions = await this.usdaRepository.getFoodPortions(fdcId);
+            if (portions.length > 0) {
+                await this.ingredientsRepository.savePortions(ingredient.id, portions);
+            }
+        } catch (error) {
+            console.error(`Failed to fetch/save portions for FDC ID ${fdcId}:`, error);
+            // Non-critical failure, portions are optional
         }
 
         return {

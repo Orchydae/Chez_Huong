@@ -15,9 +15,15 @@ export interface IIngredientsRepository {
     findMissingIngredients(ingredientIds: number[]): Promise<number[]>;
 
     /**
-     * Find an ingredient by its name (case-insensitive)
+     * Find an ingredient by its name (case-insensitive, exact match)
      */
     findByName(name: string): Promise<Ingredient | null>;
+
+    /**
+     * Search for ingredients by name (case-insensitive, partial match)
+     * @returns Array of matching ingredients
+     */
+    searchByName(query: string, limit?: number): Promise<Ingredient[]>;
 
     /**
      * Find an ingredient by its USDA FoodData Central ID
@@ -63,6 +69,23 @@ export interface IIngredientsRepository {
      * Clear pending matches for a search query
      */
     clearPendingMatches(query: string): Promise<void>;
+
+    // ===== Portion Methods =====
+
+    /**
+     * Save portion data for an ingredient (upserts)
+     */
+    savePortions(ingredientId: number, portions: { portionName: string; gramWeight: number }[]): Promise<void>;
+
+    /**
+     * Get all portions for an ingredient
+     */
+    getPortions(ingredientId: number): Promise<{ portionName: string; gramWeight: number }[]>;
+
+    /**
+     * Get a specific portion by name for an ingredient
+     */
+    getPortionByName(ingredientId: number, portionName: string): Promise<{ gramWeight: number } | null>;
 }
 
 export const IIngredientsRepository = Symbol('IIngredientsRepository');

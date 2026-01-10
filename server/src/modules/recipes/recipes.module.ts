@@ -12,6 +12,7 @@ import { GetRecipesHandler } from './application/queries/get-recipes.handler';
 import { GetRecipeHandler } from './application/queries/get-recipe.handler';
 import { RecipesService } from './application/services/recipes.service';
 import { IngredientsService } from './application/services/ingredients.service';
+import { NutritionalValueService } from './application/services/nutritional-value.service';
 import { PrismaIngredientsRepository } from './infrastructure/adapters/persistence/prisma.ingredients.repository';
 import { UsdaAdapter } from './infrastructure/adapters/external/usda.adapter';
 import { UsdaPort } from './domain/ports/usda.port';
@@ -25,6 +26,7 @@ import { UsdaPort } from './domain/ports/usda.port';
     providers: [
         RecipesService,
         IngredientsService,
+        NutritionalValueService,
         CreateRecipeHandler,
         GetRecipesHandler,
         GetRecipeHandler,

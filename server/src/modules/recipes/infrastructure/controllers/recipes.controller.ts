@@ -1,11 +1,15 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { RecipesService } from '../../application/services/recipes.service';
+import { NutritionalValueService } from '../../application/services/nutritional-value.service';
 import { CreateRecipeDto } from './dtos/create-recipe.dto';
 import { CreateRecipeCommand, IngredientSectionData, RecipeIngredientData } from '../../application/commands/create-recipe.command';
 
 @Controller('recipes')
 export class RecipesController {
-    constructor(private readonly recipesService: RecipesService) { }
+    constructor(
+        private readonly recipesService: RecipesService,
+        private readonly nutritionalValueService: NutritionalValueService,
+    ) { }
 
     @Post()
     create(@Body() dto: CreateRecipeDto) {
@@ -48,5 +52,21 @@ export class RecipesController {
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.recipesService.findOne(+id);
+    }
+
+    /**
+     * Calculate nutritional info for a recipe (preview, does not save)
+     */
+    @Get(':id/nutrition')
+    async getRecipeNutrition(@Param('id') id: string) {
+        return this.nutritionalValueService.calculateRecipeNutrition(+id);
+    }
+
+    /**
+     * Calculate and save nutritional info for a recipe
+     */
+    @Post(':id/nutrition/calculate')
+    async calculateRecipeNutrition(@Param('id') id: string) {
+        return this.nutritionalValueService.calculateAndSaveRecipeNutrition(+id);
     }
 }

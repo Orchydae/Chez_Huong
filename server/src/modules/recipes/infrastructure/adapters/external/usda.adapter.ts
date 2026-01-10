@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import type { UsdaPort, UsdaFoodMatch, UsdaNutritionData } from '../../../domain/ports/usda.port';
+import type { UsdaPort, UsdaFoodMatch, UsdaNutritionData, UsdaPortionData } from '../../../domain/ports/usda.port';
 
 interface UsdaSearchResponse {
     foods: Array<{
@@ -20,10 +20,25 @@ interface UsdaFoodNutrient {
     amount?: number;
 }
 
+interface UsdaFoodPortion {
+    gramWeight?: number;
+    modifier?: string;           // e.g., "10205" (portion code)
+    portionDescription?: string; // e.g., "1 cup, halves"
+    measureUnit?: {
+        name?: string;           // e.g., "cup"
+        abbreviation?: string;
+    };
+}
+
 interface UsdaFoodResponse {
     fdcId: number;
     description: string;
     foodNutrients: UsdaFoodNutrient[];
+    foodPortions?: UsdaFoodPortion[];
+    // For branded foods
+    servingSize?: number;
+    servingSizeUnit?: string;
+    householdServingFullText?: string;
 }
 
 // USDA Nutrient ID mapping
@@ -119,6 +134,119 @@ export class UsdaAdapter implements UsdaPort {
             });
             throw new Error(`Failed to get food nutrition from USDA: ${error.message}`);
         }
+    }
+
+    async getFoodPortions(fdcId: number): Promise<UsdaPortionData[]> {
+        try {
+            const response = await this.httpService.axiosRef.get<UsdaFoodResponse>(
+                `${this.baseUrl}/food/${fdcId}`,
+                {
+                    params: {
+                        api_key: this.apiKey,
+                        format: 'full',
+                    },
+                },
+            );
+
+            const portions: UsdaPortionData[] = [];
+
+            // Extract from foodPortions array (Foundation/Survey foods)
+            if (response.data.foodPortions && response.data.foodPortions.length > 0) {
+                for (const portion of response.data.foodPortions) {
+                    if (!portion.gramWeight || portion.gramWeight <= 0) continue;
+
+                    // Try to get portion name from various fields
+                    const portionName = this.extractPortionName(portion);
+                    if (!portionName) continue;
+
+                    const normalizedName = this.normalizePortionName(portionName);
+                    if (!normalizedName) continue;
+
+                    // Avoid duplicates
+                    if (!portions.find(p => p.portionName === normalizedName)) {
+                        portions.push({
+                            portionName: normalizedName,
+                            gramWeight: portion.gramWeight,
+                        });
+                    }
+                }
+            }
+
+            // For branded foods, try servingSize
+            if (portions.length === 0 && response.data.servingSize && response.data.servingSizeUnit === 'g') {
+                const servingText = response.data.householdServingFullText;
+                if (servingText) {
+                    const normalizedName = this.normalizePortionName(servingText);
+                    if (normalizedName) {
+                        portions.push({
+                            portionName: normalizedName,
+                            gramWeight: response.data.servingSize,
+                        });
+                    }
+                }
+            }
+
+            return portions;
+        } catch (error: any) {
+            console.error('USDA API get food portions failed:', {
+                message: error.message,
+                status: error.response?.status,
+                data: error.response?.data,
+            });
+            // Return empty array instead of throwing - portions are optional
+            return [];
+        }
+    }
+
+    private extractPortionName(portion: UsdaFoodPortion): string | null {
+        // Priority: measureUnit.name > parsed from portionDescription
+        if (portion.measureUnit?.name && portion.measureUnit.name !== 'undetermined') {
+            return portion.measureUnit.name;
+        }
+
+        // Try to parse from portionDescription (e.g., "1 cup, halves" -> "cup")
+        if (portion.portionDescription) {
+            const match = portion.portionDescription.match(/^[\d\.]+\s+([a-zA-Z]+)/i);
+            if (match) {
+                return match[1];
+            }
+            // Check for size descriptors like "large", "medium", "small"
+            const sizeMatch = portion.portionDescription.match(/\b(large|medium|small|extra large|extra small)\b/i);
+            if (sizeMatch) {
+                return sizeMatch[1].toLowerCase();
+            }
+        }
+
+        return null;
+    }
+
+    private normalizePortionName(name: string): string | null {
+        const normalized = name.toLowerCase().trim();
+
+        // Common aliases
+        const aliases: Record<string, string> = {
+            'cups': 'cup',
+            'tablespoons': 'tbsp',
+            'tablespoon': 'tbsp',
+            'teaspoons': 'tsp',
+            'teaspoon': 'tsp',
+            'ounces': 'oz',
+            'ounce': 'oz',
+            'pounds': 'lb',
+            'pound': 'lb',
+            'grams': 'g',
+            'gram': 'g',
+            'kilograms': 'kg',
+            'kilogram': 'kg',
+            'milliliters': 'ml',
+            'milliliter': 'ml',
+            'liters': 'l',
+            'liter': 'l',
+            'extra large': 'extra-large',
+            'extra small': 'extra-small',
+        };
+
+        return aliases[normalized] || normalized;
     }
 
     private mapNutrients(nutrients: UsdaFoodNutrient[]): UsdaNutritionData {

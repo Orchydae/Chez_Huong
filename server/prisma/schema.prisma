@@ -91,6 +91,20 @@ model Ingredient {
   fdcId     Int?                 @unique // FoodData Central ID (link to USDA)
   recipes   RecipeIngredient[]
   nutrition IngredientNutrition?
+  portions  IngredientPortion[]
+}
+
+// Stores USDA portion weights for unit-to-gram conversion
+// e.g., "1 cup flour = 125g", "1 tbsp butter = 14g"
+model IngredientPortion {
+  id           Int        @id @default(autoincrement())
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  
+  portionName  String     // normalized unit: "cup", "tbsp", "large", "slice"
+  gramWeight   Float      // grams per 1 unit of this portion
+  
+  @@unique([ingredientId, portionName])
 }
 
 model IngredientNutrition {

@@ -17,6 +17,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       DIRECT_URL: ${DIRECT_URL}
       USDA_API_KEY: ${USDA_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "${PORT:-3000}:3000"
     volumes:

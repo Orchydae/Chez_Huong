@@ -5,6 +5,15 @@ export interface UsdaFoodMatch {
     dataType?: string;
 }
 
+/**
+ * Portion data from USDA FoodData Central
+ * Maps a serving unit to its gram weight
+ */
+export interface UsdaPortionData {
+    portionName: string;  // e.g., "cup", "tbsp", "large"
+    gramWeight: number;   // grams per 1 unit
+}
+
 export interface UsdaNutritionData {
     // Macronutrients
     calories?: number;      // kcal
@@ -55,6 +64,13 @@ export interface UsdaPort {
      * @returns Nutrition data (per 100g)
      */
     getFoodNutrition(fdcId: number): Promise<UsdaNutritionData>;
+
+    /**
+     * Get portion/serving data for a food by its FDC ID
+     * @param fdcId - USDA FoodData Central ID 
+     * @returns Array of portions with gram weights
+     */
+    getFoodPortions(fdcId: number): Promise<UsdaPortionData[]>;
 }
 
 export const UsdaPort = Symbol('UsdaPort');

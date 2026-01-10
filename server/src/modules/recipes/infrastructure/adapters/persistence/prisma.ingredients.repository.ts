@@ -37,6 +37,23 @@ export class PrismaIngredientsRepository implements IIngredientsRepository {
         return ingredient;
     }
 
+    async searchByName(query: string, limit = 50): Promise<Ingredient[]> {
+        const ingredients = await this.prisma.ingredient.findMany({
+            where: {
+                name: {
+                    contains: query,
+                    mode: 'insensitive',
+                },
+            },
+            take: limit,
+            orderBy: {
+                name: 'asc',
+            },
+        });
+
+        return ingredients;
+    }
+
     async findByFdcId(fdcId: number): Promise<Ingredient | null> {
         const ingredient = await this.prisma.ingredient.findUnique({
             where: { fdcId },
@@ -182,6 +199,60 @@ export class PrismaIngredientsRepository implements IIngredientsRepository {
                 searchQuery: query.toLowerCase(),
             },
         });
+    }
+
+    // ===== Portion Methods =====
+
+    async savePortions(ingredientId: number, portions: { portionName: string; gramWeight: number }[]): Promise<void> {
+        if (portions.length === 0) return;
+
+        // Upsert each portion
+        for (const portion of portions) {
+            await this.prisma.ingredientPortion.upsert({
+                where: {
+                    ingredientId_portionName: {
+                        ingredientId,
+                        portionName: portion.portionName,
+                    },
+                },
+                update: {
+                    gramWeight: portion.gramWeight,
+                },
+                create: {
+                    ingredientId,
+                    portionName: portion.portionName,
+                    gramWeight: portion.gramWeight,
+                },
+            });
+        }
+    }
+
+    async getPortions(ingredientId: number): Promise<{ portionName: string; gramWeight: number }[]> {
+        const portions = await this.prisma.ingredientPortion.findMany({
+            where: { ingredientId },
+            select: {
+                portionName: true,
+                gramWeight: true,
+            },
+        });
+
+        return portions;
+    }
+
+    async getPortionByName(ingredientId: number, portionName: string): Promise<{ gramWeight: number } | null> {
+        const portion = await this.prisma.ingredientPortion.findUnique({
+            where: {
+                ingredientId_portionName: {
+                    ingredientId,
+                    portionName,
+                },
+            },
+            select: {
+                gramWeight: true,
+            },
+        });
+
+        return portion;
     }
 }
 

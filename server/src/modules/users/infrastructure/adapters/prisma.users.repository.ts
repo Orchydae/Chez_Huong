@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IUsersRepository } from '../../domain/ports/users.port';
 import { User } from '../../domain/entities/user.entity';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 
 export const userListInput: Prisma.UserSelect = {
     id: true,
@@ -26,6 +26,7 @@ export class PrismaUsersRepository implements IUsersRepository {
     }
 
     async findByEmail(email: string): Promise<User | null> {
+        // ... (this part is unchanged, but I must provide the full block for context if I use replace_file_content with a large range, but I can narrow it down)
         return this.prisma.user.findUnique({
             where: { email },
             select: {
@@ -39,7 +40,7 @@ export class PrismaUsersRepository implements IUsersRepository {
         return this.prisma.user.create({
             data: {
                 ...data,
-                role: 'Reader', // Default role
+                role: Role.READER, // Default role
             },
             select: userListInput,
         }) as unknown as User;

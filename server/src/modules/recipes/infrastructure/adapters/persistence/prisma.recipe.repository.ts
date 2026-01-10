@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { IRecipesRepository, IngredientSectionData } from '../../../domain/ports/recipe.port';
+import { IRecipesRepository, IngredientSectionData, RecipeIngredientWithNutrition } from '../../../domain/ports/recipe.port';
 import { Recipe } from '../../../domain/entities/recipe.entity';
 import { RecipeMapper } from './recipe.mapper';
 
@@ -90,5 +90,133 @@ export class PrismaRecipeRepository implements IRecipesRepository {
 
         const saved = await this.prisma.recipe.create({ data });
         return RecipeMapper.toDomain(saved);
+    }
+
+    async getRecipeIngredientsWithNutrition(recipeId: number): Promise<RecipeIngredientWithNutrition[]> {
+        const sections = await this.prisma.ingredientSection.findMany({
+            where: { recipeId },
+            include: {
+                ingredients: {
+                    include: {
+                        ingredient: {
+                            include: {
+                                nutrition: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        const result: RecipeIngredientWithNutrition[] = [];
+
+        for (const section of sections) {
+            for (const recipeIngredient of section.ingredients) {
+                result.push({
+                    ingredientId: recipeIngredient.ingredientId,
+                    quantity: recipeIngredient.quantity,
+                    unit: recipeIngredient.unit,
+                    nutrition: recipeIngredient.ingredient.nutrition ? {
+                        servingSize: recipeIngredient.ingredient.nutrition.servingSize,
+                        calories: recipeIngredient.ingredient.nutrition.calories,
+                        protein: recipeIngredient.ingredient.nutrition.protein,
+                        carbohydrates: recipeIngredient.ingredient.nutrition.carbohydrates,
+                        fiber: recipeIngredient.ingredient.nutrition.fiber,
+                        sugar: recipeIngredient.ingredient.nutrition.sugar,
+                        totalFat: recipeIngredient.ingredient.nutrition.totalFat,
+                        saturatedFat: recipeIngredient.ingredient.nutrition.saturatedFat,
+                        monounsatFat: recipeIngredient.ingredient.nutrition.monounsatFat,
+                        polyunsatFat: recipeIngredient.ingredient.nutrition.polyunsatFat,
+                        transFat: recipeIngredient.ingredient.nutrition.transFat,
+                        cholesterol: recipeIngredient.ingredient.nutrition.cholesterol,
+                        sodium: recipeIngredient.ingredient.nutrition.sodium,
+                        potassium: recipeIngredient.ingredient.nutrition.potassium,
+                        calcium: recipeIngredient.ingredient.nutrition.calcium,
+                        iron: recipeIngredient.ingredient.nutrition.iron,
+                        magnesium: recipeIngredient.ingredient.nutrition.magnesium,
+                        zinc: recipeIngredient.ingredient.nutrition.zinc,
+                        vitaminA: recipeIngredient.ingredient.nutrition.vitaminA,
+                        vitaminC: recipeIngredient.ingredient.nutrition.vitaminC,
+                        vitaminD: recipeIngredient.ingredient.nutrition.vitaminD,
+                        vitaminE: recipeIngredient.ingredient.nutrition.vitaminE,
+                        vitaminK: recipeIngredient.ingredient.nutrition.vitaminK,
+                        vitaminB6: recipeIngredient.ingredient.nutrition.vitaminB6,
+                        vitaminB12: recipeIngredient.ingredient.nutrition.vitaminB12,
+                        folate: recipeIngredient.ingredient.nutrition.folate,
+                    } : null,
+                });
+            }
+        }
+
+        return result;
+    }
+
+    async getRecipeServings(recipeId: number): Promise<number | null> {
+        const recipe = await this.prisma.recipe.findUnique({
+            where: { id: recipeId },
+            select: { servings: true },
+        });
+        return recipe?.servings ?? null;
+    }
+
+    async saveNutritionalInfo(recipeId: number, nutrition: Record<string, number | null>): Promise<void> {
+        await this.prisma.nutritionalInfo.upsert({
+            where: { recipeId },
+            update: {
+                calories: nutrition.calories,
+                protein: nutrition.protein,
+                carbohydrates: nutrition.carbohydrates,
+                fiber: nutrition.fiber,
+                sugar: nutrition.sugar,
+                totalFat: nutrition.totalFat,
+                saturatedFat: nutrition.saturatedFat,
+                monounsatFat: nutrition.monounsatFat,
+                polyunsatFat: nutrition.polyunsatFat,
+                transFat: nutrition.transFat,
+                cholesterol: nutrition.cholesterol,
+                sodium: nutrition.sodium,
+                potassium: nutrition.potassium,
+                calcium: nutrition.calcium,
+                iron: nutrition.iron,
+                magnesium: nutrition.magnesium,
+                zinc: nutrition.zinc,
+                vitaminA: nutrition.vitaminA,
+                vitaminC: nutrition.vitaminC,
+                vitaminD: nutrition.vitaminD,
+                vitaminE: nutrition.vitaminE,
+                vitaminK: nutrition.vitaminK,
+                vitaminB6: nutrition.vitaminB6,
+                vitaminB12: nutrition.vitaminB12,
+                folate: nutrition.folate,
+            },
+            create: {
+                recipeId,
+                calories: nutrition.calories,
+                protein: nutrition.protein,
+                carbohydrates: nutrition.carbohydrates,
+                fiber: nutrition.fiber,
+                sugar: nutrition.sugar,
+                totalFat: nutrition.totalFat,
+                saturatedFat: nutrition.saturatedFat,
+                monounsatFat: nutrition.monounsatFat,
+                polyunsatFat: nutrition.polyunsatFat,
+                transFat: nutrition.transFat,
+                cholesterol: nutrition.cholesterol,
+                sodium: nutrition.sodium,
+                potassium: nutrition.potassium,
+                calcium: nutrition.calcium,
+                iron: nutrition.iron,
+                magnesium: nutrition.magnesium,
+                zinc: nutrition.zinc,
+                vitaminA: nutrition.vitaminA,
+                vitaminC: nutrition.vitaminC,
+                vitaminD: nutrition.vitaminD,
+                vitaminE: nutrition.vitaminE,
+                vitaminK: nutrition.vitaminK,
+                vitaminB6: nutrition.vitaminB6,
+                vitaminB12: nutrition.vitaminB12,
+                folate: nutrition.folate,
+            },
+        });
     }
 }
