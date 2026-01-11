@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -51,9 +52,18 @@ enum Difficulty {
 }
 
 enum RecipeType {
-  ENTREE
+  BREAKFAST
   MAIN
+  SIDE
   DESSERT
+  APPETIZER
+  SALAD
+  SNACK
+}
+
+enum TimeUnit {
+  MINUTES
+  HOURS
 }
 
 model Recipe {
@@ -61,7 +71,9 @@ model Recipe {
   title       String
   description String?
   prepTime    Int // in minutes
+  prepTimeUnit TimeUnit @default(MINUTES)
   cookTime    Int // in minutes
+  cookTimeUnit TimeUnit @default(MINUTES)
   difficulty  Difficulty
   type        RecipeType
   cuisine     String // e.g., "Vietnamese", "French"
@@ -71,7 +83,7 @@ model Recipe {
   author      User    @relation(fields: [authorId], references: [id])
 
   particularities Particularity[]
-  steps           Step[]
+  stepSections    StepSection[]
   ingredientSections IngredientSection[]
   nutritionalInfo NutritionalInfo?
   likes           Like[]
@@ -95,14 +107,21 @@ model Particularity {
   @@unique([recipeId, type])
 }
 
+model StepSection {
+  id       Int    @id @default(autoincrement())
+  title    String
+  recipeId Int
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  steps    Step[]
+}
+
 model Step {
-  id          Int    @id @default(autoincrement())
-  order       Int
-  title       String
-  description String
-  mediaUrl    String?
-  recipeId    Int
-  recipe      Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  id            Int         @id @default(autoincrement())
+  order         Int
+  description   String
+  mediaUrl      String?
+  stepSectionId Int
+  stepSection   StepSection @relation(fields: [stepSectionId], references: [id], onDelete: Cascade)
 }
 
 model Ingredient {

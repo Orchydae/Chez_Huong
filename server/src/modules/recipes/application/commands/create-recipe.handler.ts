@@ -34,7 +34,9 @@ export class CreateRecipeHandler {
             command.title,
             command.description,
             command.prepTime,
+            command.prepTimeUnit,
             command.cookTime,
+            command.cookTimeUnit,
             command.difficulty,
             command.type,
             command.cuisine,
@@ -45,8 +47,8 @@ export class CreateRecipeHandler {
         );
 
 
-        // Save recipe with ingredient sections
+        // Save recipe with ingredient sections and step sections
         // Note: Repository needs to be updated to handle ingredient sections
-        return this.recipeRepository.save(recipe, command.ingredientSections);
+        return this.recipeRepository.save(recipe, command.ingredientSections, command.stepSections);
     }
 }

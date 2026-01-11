@@ -47,13 +47,20 @@ export enum ParticularityType {
     HIGH_PROTEIN = 'HIGH_PROTEIN',
 }
 
+export enum TimeUnit {
+    MINUTES = 'MINUTES',
+    HOURS = 'HOURS',
+}
+
 export class Recipe {
     constructor(
         public id: number,
         public title: string,
         public description: string | null,
         public prepTime: number,
+        public prepTimeUnit: TimeUnit,
         public cookTime: number,
+        public cookTimeUnit: TimeUnit,
         public difficulty: string,
         public type: string,
         public cuisine: string,

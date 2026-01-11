@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { IRecipesRepository, IngredientSectionData, RecipeIngredientWithNutrition } from '../../../domain/ports/recipe.port';
+import { IRecipesRepository, IngredientSectionData, RecipeIngredientWithNutrition, StepSectionData } from '../../../domain/ports/recipe.port';
 import { Recipe } from '../../../domain/entities/recipe.entity';
 import { RecipeMapper } from './recipe.mapper';
 
@@ -19,7 +19,7 @@ export class PrismaRecipeRepository implements IRecipesRepository {
         return recipe ? RecipeMapper.toDomain(recipe) : null;
     }
 
-    async save(recipe: Recipe, ingredientSections?: IngredientSectionData[]): Promise<Recipe> {
+    async save(recipe: Recipe, ingredientSections?: IngredientSectionData[], stepSections?: StepSectionData[]): Promise<Recipe> {
         // Basic implementation for now - assuming creation if no ID, or we can separate create/update
         // For this use case, we are creating. 
         // Note: We need to handle Enum mapping if we strictly typed Enums in Domain. 
@@ -30,7 +30,9 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             title: recipe.title,
             description: recipe.description,
             prepTime: recipe.prepTime,
+            prepTimeUnit: recipe.prepTimeUnit as any,
             cookTime: recipe.cookTime,
+            cookTimeUnit: recipe.cookTimeUnit as any,
             difficulty: recipe.difficulty as any, // Cast to Prisma Enum
             type: recipe.type as any,             // Cast to Prisma Enum
             cuisine: recipe.cuisine,
@@ -92,6 +94,21 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             data.particularities = {
                 create: recipe.particularities.map(type => ({
                     type: type,
+                }))
+            };
+        }
+        // Add stepSections if provided
+        if (stepSections && stepSections.length > 0) {
+            data.stepSections = {
+                create: stepSections.map(section => ({
+                    title: section.title,
+                    steps: {
+                        create: section.steps.map(step => ({
+                            order: step.order,
+                            description: step.description,
+                            mediaUrl: step.mediaUrl,
+                        }))
+                    }
                 }))
             };
         }

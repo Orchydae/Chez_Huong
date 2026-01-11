@@ -28,11 +28,16 @@ class Particularite {
     +nom: string
 }
 
+class StepSection {
+    +nom: string
+    +recette: Recette
+}
+
 class Step {
     +ordre: number
     +nom: string
     +description: string
-    +recette: Recette
+    +stepSection: StepSection
     +mediaUrl: string
 }
 
@@ -83,7 +88,8 @@ Recette "*" --> "*" Particularite: Possède
 Recette "1" --> "1" CalculNutritionnel: Analyse
 Recette "1" <-- "*" Like: Concerne
 Recette "1" <-- "*" Comment: Concerne
-Recette "1" --> "*" Step: Contient
+Recette "1" --> "*" StepSection: Contient
+StepSection "1" --> "*" Step: Contient
 
 Utilisateur "1" --> "*" Like: Like/Dislike
 Utilisateur "1" --> "*" Comment: Commente

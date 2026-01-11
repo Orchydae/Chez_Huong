@@ -12,6 +12,17 @@ export interface IngredientSectionData {
     ingredients: RecipeIngredientData[];
 }
 
+export interface StepData {
+    order: number;
+    description: string;
+    mediaUrl?: string;
+}
+
+export interface StepSectionData {
+    title: string;
+    steps: StepData[];
+}
+
 /**
  * Recipe ingredient with nutrition data for calculation
  */
@@ -52,7 +63,7 @@ export interface RecipeIngredientWithNutrition {
 export interface IRecipesRepository {
     findAll(): Promise<Recipe[]>;
     findById(id: number): Promise<Recipe | null>;
-    save(recipe: Recipe, ingredientSections?: IngredientSectionData[]): Promise<Recipe>;
+    save(recipe: Recipe, ingredientSections?: IngredientSectionData[], stepSections?: StepSectionData[]): Promise<Recipe>;
 
     /**
      * Get all ingredients for a recipe with their nutrition data (per 100g)

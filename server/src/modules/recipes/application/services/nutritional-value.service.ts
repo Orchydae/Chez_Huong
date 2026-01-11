@@ -26,6 +26,7 @@ const WEIGHT_TO_GRAMS: Record<string, number> = {
     gram: 1,
     kg: 1000,
     oz: 28.35,
+    onz: 28.35,
     lb: 453.59,
     pound: 453.59,
 };

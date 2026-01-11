@@ -2,7 +2,8 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { RecipesService } from '../../application/services/recipes.service';
 import { NutritionalValueService } from '../../application/services/nutritional-value.service';
 import { CreateRecipeDto } from './dtos/create-recipe.dto';
-import { CreateRecipeCommand, IngredientSectionData, RecipeIngredientData } from '../../application/commands/create-recipe.command';
+import { CreateRecipeCommand, IngredientSectionData, RecipeIngredientData, StepSectionData, StepData } from '../../application/commands/create-recipe.command';
+import { TimeUnit } from '../../domain/entities/recipe.entity';
 
 @Controller('recipes')
 export class RecipesController {
@@ -18,7 +19,9 @@ export class RecipesController {
             dto.title,
             dto.description,
             dto.prepTime,
+            dto.prepTimeUnit || TimeUnit.MINUTES,
             dto.cookTime,
+            dto.cookTimeUnit || TimeUnit.MINUTES,
             dto.difficulty,
             dto.type,
             dto.cuisine,
@@ -37,7 +40,19 @@ export class RecipesController {
                 )
             ),
             dto.nutritionalInfo,
-            dto.particularities
+            dto.particularities,
+            dto.stepSections?.map(section =>
+                new StepSectionData(
+                    section.title,
+                    section.steps.map(step =>
+                        new StepData(
+                            step.order,
+                            step.description,
+                            step.mediaUrl
+                        )
+                    )
+                )
+            )
         );
 
 
