@@ -107,8 +107,28 @@ package "Auth Module" as Auth {
     AuthDecorators --> AuthGuards: sets the metadata
 }
 
+package "Translation Module" as Translation {
+    package "Application Layer" as TranslationAL {
+        rectangle "TranslationService" as TranslationService
+    }
+
+    package "Domain Layer" as TranslationDL {
+        rectangle "TranslationPort" as TranslationPort
+    }
+
+    package "Infrastructure Layer" as TranslationIL {
+        rectangle "GoogleTranslateAdapter" as GoogleTranslateAdapter
+        [TranslationController]
+    }
+
+    TranslationPort ..|> GoogleTranslateAdapter: implements (realizes)
+    TranslationService --> TranslationPort: depends on
+    TranslationController --> TranslationService: uses
+}
+
 ' Dependencies
 Users --> Recipes: Read/Write
+Recipes --> Translation: Read
 
 
 @enduml
