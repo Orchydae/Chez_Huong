@@ -12,20 +12,28 @@ node "Chez Huong Container" as Server {
         component "Auth Module" as AuthModule
         component "Users Module" as UsersModule
         component "Recipes Module" as RecipesModule
+        component "Translation Module" as TranslationModule
         component "Social & Interactions Module" as SocialModule
         component "Observabilité & Surveillance Module" as ObservabilityModule
 
         AuthModule --> UsersModule
         UsersModule --> RecipesModule
         UsersModule --> SocialModule
+        RecipesModule --> TranslationModule
         SocialModule --> RecipesModule
     }
 }
+
+
+' === EXTERNAL SERVICES ===
+cloud "Google Cloud Translation API" as GoogleCloudTranslationAPI
+cloud "USDA API" as USDAAPI
 
 database "Supabase DB" as Supabase
 
 ' === RELATIONS ===
 Client --> Server: HTTPS / JSON
 Server <--> Supabase : DB / SQL
-
+TranslationModule --> GoogleCloudTranslationAPI : HTTPS / JSON
+RecipesModule --> USDAAPI : HTTPS / JSON
 @enduml
