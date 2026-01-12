@@ -238,6 +238,11 @@ model Comment {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   recipeId  Int
   recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  // Reply support - self-referential relation
+  parentId  Int?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
 }
 
 model NutritionalInfo {

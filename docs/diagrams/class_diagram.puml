@@ -93,5 +93,6 @@ StepSection "1" --> "*" Step: Contient
 
 Utilisateur "1" --> "*" Like: Like/Dislike
 Utilisateur "1" --> "*" Comment: Commente
+Comment "1" --> "*" Comment: Répond
 
 @enduml

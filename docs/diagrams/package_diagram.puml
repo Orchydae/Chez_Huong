@@ -126,9 +126,45 @@ package "Translation Module" as Translation {
     TranslationController --> TranslationService: uses
 }
 
+package "Social & Interactions Module" as Social {
+    package "Application Layer" as SocialAL {
+        rectangle "SocialInteractionService" as SocialInteractionService
+        [socialInteractionCommands]
+        [socialInteractionQueries]
+
+        SocialInteractionService --> socialInteractionCommands: depends on
+        SocialInteractionService --> socialInteractionQueries: depends on
+    }
+
+    package "Domain Layer" as SocialDL {
+        package "Entities" as SocialInteractionDL {
+            [Comment]
+            [Like]
+        }
+        package "Ports" as SocialInteractionDP {
+            [SocialInteractionPort]
+        }
+    }
+
+    package "Infrastructure Layer" as SocialIL {
+        package "Adapters" as SocialILAdapters {
+            package "Persistence" as SocialILPersistence {
+                [PrismaSocialInteractionRepository]
+            }
+        }
+        package "Controllers" as SocialILControllers {
+            [SocialInteractionController]
+        }
+    }
+
+    PrismaSocialInteractionRepository ..|> SocialInteractionPort: implements (realizes)
+}
+
 ' Dependencies
 Users --> Recipes: Read/Write
 Recipes --> Translation: Read
+Users --> Social: Interactions
+Social --> Recipes: Comments, Likes
 
 
 @enduml
