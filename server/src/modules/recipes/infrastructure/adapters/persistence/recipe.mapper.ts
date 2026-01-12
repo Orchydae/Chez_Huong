@@ -10,7 +10,9 @@ export class RecipeMapper {
         return new Recipe(
             raw.id,
             raw.title,
+            raw.title_fr,
             raw.description,
+            raw.description_fr,
             raw.prepTime,
             raw.prepTimeUnit as any,
             raw.cookTime,

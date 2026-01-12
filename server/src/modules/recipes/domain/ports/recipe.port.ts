@@ -9,17 +9,20 @@ export interface RecipeIngredientData {
 
 export interface IngredientSectionData {
     name: string;
+    name_fr?: string;
     ingredients: RecipeIngredientData[];
 }
 
 export interface StepData {
     order: number;
     description: string;
+    description_fr?: string;
     mediaUrl?: string;
 }
 
 export interface StepSectionData {
     title: string;
+    title_fr?: string;
     steps: StepData[];
 }
 

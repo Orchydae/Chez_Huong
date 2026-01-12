@@ -11,6 +11,7 @@ export class RecipeIngredientData {
 export class IngredientSectionData {
     constructor(
         public readonly name: string,
+        public readonly name_fr: string | undefined,
         public readonly ingredients: RecipeIngredientData[],
     ) { }
 }
@@ -19,6 +20,7 @@ export class StepData {
     constructor(
         public readonly order: number,
         public readonly description: string,
+        public readonly description_fr: string | undefined,
         public readonly mediaUrl?: string,
     ) { }
 }
@@ -26,6 +28,7 @@ export class StepData {
 export class StepSectionData {
     constructor(
         public readonly title: string,
+        public readonly title_fr: string | undefined,
         public readonly steps: StepData[],
     ) { }
 }
@@ -33,7 +36,9 @@ export class StepSectionData {
 export class CreateRecipeCommand {
     constructor(
         public readonly title: string,
+        public readonly title_fr: string | undefined,
         public readonly description: string | null,
+        public readonly description_fr: string | undefined,
         public readonly prepTime: number,
         public readonly prepTimeUnit: TimeUnit,
         public readonly cookTime: number,

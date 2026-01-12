@@ -56,7 +56,9 @@ export class Recipe {
     constructor(
         public id: number,
         public title: string,
+        public title_fr: string | null,
         public description: string | null,
+        public description_fr: string | null,
         public prepTime: number,
         public prepTimeUnit: TimeUnit,
         public cookTime: number,

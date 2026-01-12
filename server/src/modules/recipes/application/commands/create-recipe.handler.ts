@@ -32,7 +32,9 @@ export class CreateRecipeHandler {
         const recipe = new Recipe(
             0,
             command.title,
+            command.title_fr || null,
             command.description,
+            command.description_fr || null,
             command.prepTime,
             command.prepTimeUnit,
             command.cookTime,

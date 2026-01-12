@@ -17,7 +17,9 @@ export class RecipesController {
         // Map DTO → Command (infrastructure → application)
         const command = new CreateRecipeCommand(
             dto.title,
+            dto.title_fr,
             dto.description,
+            dto.description_fr,
             dto.prepTime,
             dto.prepTimeUnit || TimeUnit.MINUTES,
             dto.cookTime,
@@ -30,6 +32,7 @@ export class RecipesController {
             dto.ingredientSections.map(section =>
                 new IngredientSectionData(
                     section.name,
+                    section.name_fr,
                     section.ingredients.map(ing =>
                         new RecipeIngredientData(
                             ing.ingredientId,
@@ -44,10 +47,12 @@ export class RecipesController {
             dto.stepSections?.map(section =>
                 new StepSectionData(
                     section.title,
+                    section.title_fr,
                     section.steps.map(step =>
                         new StepData(
                             step.order,
                             step.description,
+                            step.description_fr,
                             step.mediaUrl
                         )
                     )

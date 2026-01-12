@@ -39,7 +39,15 @@ export class CreateRecipeDto {
 
     @IsString()
     @IsOptional()
+    title_fr?: string;
+
+    @IsString()
+    @IsOptional()
     description!: string | null;
+
+    @IsString()
+    @IsOptional()
+    description_fr?: string;
 
     @IsNumber()
     @IsNotEmpty()
