@@ -15,12 +15,16 @@ node "Chez Huong Container" as Server {
         component "Translation Module" as TranslationModule
         component "Social & Interactions Module" as SocialModule
         component "Observabilité & Surveillance Module" as ObservabilityModule
+        component "Audit Module" as AuditModule
+        queue "Event Emitter" as EventEmitter
 
         AuthModule --> UsersModule
         UsersModule --> RecipesModule
         UsersModule --> SocialModule
         RecipesModule --> TranslationModule: REST API
         SocialModule --> RecipesModule
+        AuditModule ..> EventEmitter
+        AuthModule ..> EventEmitter
     }
 }
 

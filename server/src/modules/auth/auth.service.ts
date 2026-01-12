@@ -3,12 +3,15 @@ import { Injectable } from '@nestjs/common';
 import { UsersService } from '../users/application/services/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AuditAction } from '../audit/domain/enums/audit-action.enum';
 
 @Injectable()
 export class AuthService {
     constructor(
         private usersService: UsersService,
-        private jwtService: JwtService
+        private jwtService: JwtService,
+        private eventEmitter: EventEmitter2,
     ) { }
 
     async validateUser(email: string, pass: string): Promise<any> {
@@ -23,6 +26,15 @@ export class AuthService {
 
     async login(user: any) {
         const payload = { email: user.email, sub: user.id, role: user.role };
+
+        this.eventEmitter.emit('audit.user', {
+            userId: user.id,
+            userEmail: user.email,
+            action: AuditAction.USER_LOGIN,
+            resourceType: 'User',
+            resourceId: user.id,
+        });
+
         return {
             access_token: this.jwtService.sign(payload),
         };

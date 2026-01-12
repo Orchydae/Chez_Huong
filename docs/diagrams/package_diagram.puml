@@ -160,6 +160,10 @@ package "Social & Interactions Module" as Social {
     PrismaSocialInteractionRepository ..|> SocialInteractionPort: implements (realizes)
 }
 
+package "Audit Module" as Audit {
+    [...] as AuditDots
+}
+
 ' Dependencies
 Users --> Recipes: Read/Write
 Recipes --> Translation: Read

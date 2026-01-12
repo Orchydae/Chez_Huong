@@ -289,3 +289,29 @@ model NutritionalInfo {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  timestamp   DateTime @default(now())
+  
+  // Who
+  userId      String?
+  userEmail   String?
+  
+  // What
+  action      String   // e.g., "RECIPE_CREATED", "USER_LOGIN"
+  resourceType String  // e.g., "Recipe", "User"
+  resourceId  String?
+  
+  // Details
+  metadata    Json?    // Flexible JSON for details
+  
+  // Context
+  ipAddress   String?
+  userAgent   String?
+  
+  @@index([userId])
+  @@index([action])
+  @@index([resourceType])
+  @@index([timestamp])
+}
