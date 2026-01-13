@@ -3,6 +3,7 @@
 /node_modules
 /build
 /tmp
+/coverage
 
 # Logs
 logs
@@ -23,4 +24,5 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Generated
 /generated/prisma

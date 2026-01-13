@@ -1,10 +1,12 @@
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { UsersService } from '../users/application/services/users.service';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt'
 import * as argon2 from 'argon2';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuditAction } from '../audit/domain/enums/audit-action.enum';
+import { AuthResponseDto, ValidatedUserDto } from './dto/auth-response.dto';
+import { CreateUserDto } from '../users/infrastructure/dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,17 +16,22 @@ export class AuthService {
         private eventEmitter: EventEmitter2,
     ) { }
 
-    async validateUser(email: string, pass: string): Promise<any> {
+    async validateUser(email: string, pass: string): Promise<ValidatedUserDto | null> {
         const user = await this.usersService.findByEmail(email);
-        if (user && (await argon2.verify(user['password'], pass))) {
+        if (user && user.password && (await argon2.verify(user.password, pass))) {
             // Stripping the password from the returned object before returning it
-            const { password, ...result } = user as any;
-            return result;
+            return new ValidatedUserDto(
+                user.id,
+                user.firstName,
+                user.lastName,
+                user.email,
+                user.role,
+            );
         }
         return null;
     }
 
-    async login(user: any) {
+    async login(user: ValidatedUserDto): Promise<AuthResponseDto> {
         const payload = { email: user.email, sub: user.id, role: user.role };
 
         this.eventEmitter.emit('audit.user', {
@@ -35,16 +42,14 @@ export class AuthService {
             resourceId: user.id,
         });
 
-        return {
-            access_token: this.jwtService.sign(payload),
-        };
+        return new AuthResponseDto(this.jwtService.sign(payload));
     }
 
-    async register(createUserDto: any) {
+    async register(createUserDto: CreateUserDto): Promise<AuthResponseDto> {
         // Check if user exists
         const existingUser = await this.usersService.findByEmail(createUserDto.email);
         if (existingUser) {
-            throw new Error('User already exists');
+            throw new ConflictException('User already exists');
         }
 
         // Hash password
@@ -56,7 +61,16 @@ export class AuthService {
             password: hashedPassword,
         });
 
+        // Create validated user for login (without password)
+        const validatedUser = new ValidatedUserDto(
+            newUser.id,
+            newUser.firstName,
+            newUser.lastName,
+            newUser.email,
+            newUser.role,
+        );
+
         // Login
-        return this.login(newUser);
+        return this.login(validatedUser);
     }
 }
