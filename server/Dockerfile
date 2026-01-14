@@ -1,46 +1,43 @@
-# Multi-stage build for production-ready NestJS app
+# Multi-stage build for NestJS app
 
-# Stage 1: Build
-FROM node:20-alpine AS builder
-
+# Base stage for shared dependencies and setup
+FROM node:20-alpine AS base
 WORKDIR /app
+# OpenSSL is required for Prisma
+RUN apk add --no-cache openssl
 
-# Copy package files
+# Dependencies stage
+FROM base AS deps
 COPY package*.json ./
 COPY prisma ./prisma/
-
-# Install dependencies
 RUN npm ci
 
-# Copy source code
+# Development stage
+FROM base AS development
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package*.json ./
+COPY --from=deps /app/prisma ./prisma
 COPY . .
-
-# Generate Prisma Client
+# Generate client for dev
 RUN npx prisma generate
+EXPOSE 3000 5555
+CMD ["npm", "run", "start:dev"]
 
-# Build the application
+# Builder stage for production
+FROM deps AS builder
+COPY . .
+RUN npx prisma generate
 RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine AS production
-
-WORKDIR /app
-
-# Copy package files
+# Production stage
+FROM base AS production
 COPY package*.json ./
 COPY prisma ./prisma/
-
 # Install only production dependencies
 RUN npm ci --omit=dev
-
-# Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-
 # Generate Prisma Client in production stage
 RUN npx prisma generate
 
-# Expose the application port
 EXPOSE 3000
-
-# Run database migrations and start the app
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
