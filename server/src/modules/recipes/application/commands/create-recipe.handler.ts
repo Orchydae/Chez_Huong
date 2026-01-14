@@ -1,7 +1,13 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreateRecipeCommand } from './create-recipe.command';
 import { IRecipesRepository } from '../../domain/ports/recipe.port';
-import { Recipe } from '../../domain/entities/recipe.entity';
+import {
+    Recipe,
+    EmptyIngredientSectionsError,
+    EmptyIngredientsError,
+    EmptyStepSectionsError,
+    EmptyStepsError,
+} from '../../domain/entities/recipe.entity';
 import { IIngredientsRepository } from '../../domain/ports/ingredients.port';
 
 @Injectable()
@@ -19,7 +25,7 @@ export class CreateRecipeHandler {
             section => section.ingredients.map(ri => ri.ingredientId)
         );
 
-        // Check if all ingredients exist
+        // Check if all ingredients exist in the database
         const missingIngredients = await this.ingredientsRepository.findMissingIngredients(allIngredientIds);
 
         if (missingIngredients.length > 0) {
@@ -28,29 +34,41 @@ export class CreateRecipeHandler {
             );
         }
 
-        // Create the recipe entity
-        const recipe = new Recipe(
-            0,
-            command.title,
-            command.title_fr || null,
-            command.description,
-            command.description_fr || null,
-            command.prepTime,
-            command.prepTimeUnit,
-            command.cookTime,
-            command.cookTimeUnit,
-            command.difficulty,
-            command.type,
-            command.cuisine,
-            command.servings,
-            command.authorId,
-            command.nutritionalInfo,
-            command.particularities
-        );
+        // Create the recipe entity using the factory method (includes domain validation)
+        try {
+            const recipe = Recipe.create(
+                command.title,
+                command.title_fr || null,
+                command.description,
+                command.description_fr || null,
+                command.prepTime,
+                command.prepTimeUnit,
+                command.cookTime,
+                command.cookTimeUnit,
+                command.difficulty,
+                command.type,
+                command.cuisine,
+                command.servings,
+                command.authorId,
+                command.ingredientSections,
+                command.stepSections,
+                command.nutritionalInfo,
+                command.particularities,
+            );
 
-
-        // Save recipe with ingredient sections and step sections
-        // Note: Repository needs to be updated to handle ingredient sections
-        return this.recipeRepository.save(recipe, command.ingredientSections, command.stepSections);
+            // Save and return the recipe
+            return this.recipeRepository.save(recipe);
+        } catch (error) {
+            // Convert domain validation errors to HTTP-friendly errors
+            if (
+                error instanceof EmptyIngredientSectionsError ||
+                error instanceof EmptyIngredientsError ||
+                error instanceof EmptyStepSectionsError ||
+                error instanceof EmptyStepsError
+            ) {
+                throw new BadRequestException(error.message);
+            }
+            throw error;
+        }
     }
 }

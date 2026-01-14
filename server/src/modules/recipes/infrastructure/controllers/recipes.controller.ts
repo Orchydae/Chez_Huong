@@ -2,8 +2,14 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { RecipesService } from '../../application/services/recipes.service';
 import { NutritionalValueService } from '../../application/services/nutritional-value.service';
 import { CreateRecipeDto } from './dtos/create-recipe.dto';
-import { CreateRecipeCommand, IngredientSectionData, RecipeIngredientData, StepSectionData, StepData } from '../../application/commands/create-recipe.command';
-import { TimeUnit } from '../../domain/entities/recipe.entity';
+import { CreateRecipeCommand } from '../../application/commands/create-recipe.command';
+import {
+    TimeUnit,
+    RecipeIngredient,
+    IngredientSection,
+    Step,
+    StepSection,
+} from '../../domain/entities/recipe.entity';
 
 @Controller('recipes')
 export class RecipesController {
@@ -14,7 +20,36 @@ export class RecipesController {
 
     @Post()
     create(@Body() dto: CreateRecipeDto) {
-        // Map DTO → Command (infrastructure → application)
+        // Map DTO → Domain types → Command (infrastructure → domain → application)
+        const ingredientSections = dto.ingredientSections.map(section =>
+            new IngredientSection(
+                section.name,
+                section.name_fr || null,
+                section.ingredients.map(ing =>
+                    new RecipeIngredient(
+                        ing.ingredientId,
+                        ing.quantity,
+                        ing.unit,
+                    )
+                ),
+            )
+        );
+
+        const stepSections = dto.stepSections.map(section =>
+            new StepSection(
+                section.title,
+                section.title_fr || null,
+                section.steps.map(step =>
+                    new Step(
+                        step.order,
+                        step.description,
+                        step.description_fr || null,
+                        step.mediaUrl,
+                    )
+                ),
+            )
+        );
+
         const command = new CreateRecipeCommand(
             dto.title,
             dto.title_fr,
@@ -29,38 +64,11 @@ export class RecipesController {
             dto.cuisine,
             dto.servings,
             dto.authorId,
-            dto.ingredientSections.map(section =>
-                new IngredientSectionData(
-                    section.name,
-                    section.name_fr,
-                    section.ingredients.map(ing =>
-                        new RecipeIngredientData(
-                            ing.ingredientId,
-                            ing.quantity,
-                            ing.unit
-                        )
-                    )
-                )
-            ),
+            ingredientSections,
+            stepSections,
             dto.nutritionalInfo,
             dto.particularities,
-            dto.stepSections?.map(section =>
-                new StepSectionData(
-                    section.title,
-                    section.title_fr,
-                    section.steps.map(step =>
-                        new StepData(
-                            step.order,
-                            step.description,
-                            step.description_fr,
-                            step.mediaUrl
-                        )
-                    )
-                )
-            )
         );
-
-
 
         return this.recipesService.create(command);
     }

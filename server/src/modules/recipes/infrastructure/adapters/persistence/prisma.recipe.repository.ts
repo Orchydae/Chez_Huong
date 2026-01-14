@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { IRecipesRepository, IngredientSectionData, RecipeIngredientWithNutrition, StepSectionData } from '../../../domain/ports/recipe.port';
+import { IRecipesRepository, RecipeIngredientWithNutrition } from '../../../domain/ports/recipe.port';
 import { Recipe } from '../../../domain/entities/recipe.entity';
 import { RecipeMapper } from './recipe.mapper';
 
@@ -10,22 +10,41 @@ export class PrismaRecipeRepository implements IRecipesRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     async findAll(): Promise<Recipe[]> {
-        const recipes = await this.prisma.recipe.findMany();
+        const recipes = await this.prisma.recipe.findMany({
+            include: {
+                nutritionalInfo: true,
+                ingredientSections: {
+                    include: { ingredients: true },
+                },
+                stepSections: {
+                    include: { steps: true },
+                },
+                particularities: true,
+            },
+        });
         return recipes.map(RecipeMapper.toDomain);
     }
 
     async findById(id: number): Promise<Recipe | null> {
-        const recipe = await this.prisma.recipe.findUnique({ where: { id } });
+        const recipe = await this.prisma.recipe.findUnique({
+            where: { id },
+            include: {
+                nutritionalInfo: true,
+                ingredientSections: {
+                    include: { ingredients: true },
+                },
+                stepSections: {
+                    include: { steps: true },
+                },
+                particularities: true,
+            },
+        });
         return recipe ? RecipeMapper.toDomain(recipe) : null;
     }
 
-    async save(recipe: Recipe, ingredientSections?: IngredientSectionData[], stepSections?: StepSectionData[]): Promise<Recipe> {
-        // Basic implementation for now - assuming creation if no ID, or we can separate create/update
-        // For this use case, we are creating. 
-        // Note: We need to handle Enum mapping if we strictly typed Enums in Domain. 
-        // For now assuming strings match or we cast.
-
-        // We are passing the logical "Recipe" entity. If ID is 0 or null, it's new.
+    async save(recipe: Recipe): Promise<Recipe> {
+        // Recipe aggregate now contains all sections
+        // Build create data from the aggregate
         const data: any = {
             title: recipe.title,
             title_fr: recipe.title_fr,
@@ -35,17 +54,17 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             prepTimeUnit: recipe.prepTimeUnit as any,
             cookTime: recipe.cookTime,
             cookTimeUnit: recipe.cookTimeUnit as any,
-            difficulty: recipe.difficulty as any, // Cast to Prisma Enum
-            type: recipe.type as any,             // Cast to Prisma Enum
+            difficulty: recipe.difficulty as any,
+            type: recipe.type as any,
             cuisine: recipe.cuisine,
             servings: recipe.servings,
             author: { connect: { id: recipe.authorId } },
         };
 
-        // Add ingredient sections if provided
-        if (ingredientSections && ingredientSections.length > 0) {
+        // Add ingredient sections from the aggregate
+        if (recipe.ingredientSections && recipe.ingredientSections.length > 0) {
             data.ingredientSections = {
-                create: ingredientSections.map(section => ({
+                create: recipe.ingredientSections.map(section => ({
                     name: section.name,
                     name_fr: section.name_fr,
                     ingredients: {
@@ -100,10 +119,11 @@ export class PrismaRecipeRepository implements IRecipesRepository {
                 }))
             };
         }
-        // Add stepSections if provided
-        if (stepSections && stepSections.length > 0) {
+
+        // Add stepSections from the aggregate if provided
+        if (recipe.stepSections && recipe.stepSections.length > 0) {
             data.stepSections = {
-                create: stepSections.map(section => ({
+                create: recipe.stepSections.map(section => ({
                     title: section.title,
                     title_fr: section.title_fr,
                     steps: {
@@ -118,8 +138,19 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             };
         }
 
-
-        const saved = await this.prisma.recipe.create({ data });
+        const saved = await this.prisma.recipe.create({
+            data,
+            include: {
+                nutritionalInfo: true,
+                ingredientSections: {
+                    include: { ingredients: true },
+                },
+                stepSections: {
+                    include: { steps: true },
+                },
+                particularities: true,
+            },
+        });
         return RecipeMapper.toDomain(saved);
     }
 

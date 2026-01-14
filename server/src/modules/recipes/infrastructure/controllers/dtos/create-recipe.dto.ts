@@ -101,10 +101,9 @@ export class CreateRecipeDto {
     @IsEnum(ParticularityType, { each: true })
     particularities?: ParticularityType[];
 
-    @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CreateStepSectionDto)
-    stepSections?: CreateStepSectionDto[];
+    @ArrayMinSize(1, { message: 'Recipe must have at least one step section' })
+    stepSections!: CreateStepSectionDto[];
 }
-

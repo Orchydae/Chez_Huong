@@ -1,33 +1,26 @@
-import { Recipe } from '../entities/recipe.entity';
+/**
+ * Recipe Repository Port
+ *
+ * Defines the interface for recipe persistence operations.
+ * This is part of the hexagonal architecture - the domain defines what it needs,
+ * and infrastructure adapters implement this interface.
+ */
 
-// Note: IngredientSectionData is defined here to avoid circular dependency with application layer
-export interface RecipeIngredientData {
-    ingredientId: number;
-    quantity: string;
-    unit: string;
-}
+import {
+    Recipe,
+    RecipeIngredient,
+    IngredientSection,
+    Step,
+    StepSection,
+} from '../entities/recipe.entity';
 
-export interface IngredientSectionData {
-    name: string;
-    name_fr?: string;
-    ingredients: RecipeIngredientData[];
-}
-
-export interface StepData {
-    order: number;
-    description: string;
-    description_fr?: string;
-    mediaUrl?: string;
-}
-
-export interface StepSectionData {
-    title: string;
-    title_fr?: string;
-    steps: StepData[];
-}
+// Re-export domain types for convenience
+export { RecipeIngredient, IngredientSection, Step, StepSection };
 
 /**
- * Recipe ingredient with nutrition data for calculation
+ * Recipe ingredient with nutrition data for calculation.
+ * Used when fetching ingredients with their nutritional information
+ * for computing recipe nutrition totals.
  */
 export interface RecipeIngredientWithNutrition {
     ingredientId: number;
@@ -63,23 +56,38 @@ export interface RecipeIngredientWithNutrition {
     } | null;
 }
 
+/**
+ * Repository interface for Recipe aggregate persistence.
+ */
 export interface IRecipesRepository {
+    /**
+     * Find all recipes.
+     */
     findAll(): Promise<Recipe[]>;
-    findById(id: number): Promise<Recipe | null>;
-    save(recipe: Recipe, ingredientSections?: IngredientSectionData[], stepSections?: StepSectionData[]): Promise<Recipe>;
 
     /**
-     * Get all ingredients for a recipe with their nutrition data (per 100g)
+     * Find a recipe by its ID.
+     */
+    findById(id: number): Promise<Recipe | null>;
+
+    /**
+     * Save a recipe (create or update).
+     * The Recipe aggregate contains all ingredient sections and step sections.
+     */
+    save(recipe: Recipe): Promise<Recipe>;
+
+    /**
+     * Get all ingredients for a recipe with their nutrition data (per 100g).
      */
     getRecipeIngredientsWithNutrition(recipeId: number): Promise<RecipeIngredientWithNutrition[]>;
 
     /**
-     * Get servings count for a recipe
+     * Get servings count for a recipe.
      */
     getRecipeServings(recipeId: number): Promise<number | null>;
 
     /**
-     * Save/update nutritional info for a recipe
+     * Save/update nutritional info for a recipe.
      */
     saveNutritionalInfo(recipeId: number, nutrition: Record<string, number | null>): Promise<void>;
 }

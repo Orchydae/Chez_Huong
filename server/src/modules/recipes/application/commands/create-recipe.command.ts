@@ -1,38 +1,33 @@
-import type { NutritionalInfo, ParticularityType, TimeUnit } from '../../domain/entities/recipe.entity';
+/**
+ * Create Recipe Command
+ *
+ * Command object for creating a new recipe. This is a simple DTO that
+ * carries data from the controller to the handler. Validation is performed
+ * in the domain layer when creating the Recipe entity.
+ */
 
-export class RecipeIngredientData {
-    constructor(
-        public readonly ingredientId: number,
-        public readonly quantity: string,
-        public readonly unit: string,
-    ) { }
-}
+import type {
+    NutritionalInfo,
+    ParticularityType,
+    TimeUnit,
+    RecipeIngredient,
+    IngredientSection,
+    Step,
+    StepSection,
+} from '../../domain/entities/recipe.entity';
 
-export class IngredientSectionData {
-    constructor(
-        public readonly name: string,
-        public readonly name_fr: string | undefined,
-        public readonly ingredients: RecipeIngredientData[],
-    ) { }
-}
+// Re-export domain types for controller convenience
+export {
+    RecipeIngredient,
+    IngredientSection,
+    Step,
+    StepSection,
+} from '../../domain/entities/recipe.entity';
 
-export class StepData {
-    constructor(
-        public readonly order: number,
-        public readonly description: string,
-        public readonly description_fr: string | undefined,
-        public readonly mediaUrl?: string,
-    ) { }
-}
-
-export class StepSectionData {
-    constructor(
-        public readonly title: string,
-        public readonly title_fr: string | undefined,
-        public readonly steps: StepData[],
-    ) { }
-}
-
+/**
+ * Command for creating a new recipe.
+ * All validation is deferred to the domain layer.
+ */
 export class CreateRecipeCommand {
     constructor(
         public readonly title: string,
@@ -48,10 +43,9 @@ export class CreateRecipeCommand {
         public readonly cuisine: string,
         public readonly servings: number,
         public readonly authorId: string,
-        public readonly ingredientSections: IngredientSectionData[],
+        public readonly ingredientSections: IngredientSection[],
+        public readonly stepSections: StepSection[],
         public readonly nutritionalInfo?: NutritionalInfo,
         public readonly particularities?: ParticularityType[],
-        public readonly stepSections?: StepSectionData[],
     ) { }
 }
-
