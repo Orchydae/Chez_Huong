@@ -6,7 +6,6 @@ import {
     StepSection,
     ParticularityType,
     TimeUnit,
-    NutritionalInfo,
     EmptyIngredientSectionsError,
     EmptyIngredientsError,
     EmptyStepSectionsError,
@@ -315,34 +314,6 @@ describe('Recipe Entity', () => {
             }).toThrow('Recipe must have at least one step section');
         });
 
-        it('should create Recipe with nutritionalInfo', () => {
-            const nutritionalInfo: NutritionalInfo = {
-                calories: 350,
-                protein: 25,
-            };
-
-            const recipe = Recipe.create(
-                'Recipe',
-                null,
-                null,
-                null,
-                10,
-                TimeUnit.MINUTES,
-                20,
-                TimeUnit.MINUTES,
-                'EASY',
-                'MAIN',
-                'GENERAL',
-                2,
-                'author-123',
-                createValidIngredientSections(),
-                createValidStepSections(),
-                nutritionalInfo,
-            );
-
-            expect(recipe.nutritionalInfo).toEqual(nutritionalInfo);
-        });
-
         it('should create Recipe with particularities', () => {
             const particularities = [ParticularityType.VEGAN, ParticularityType.GLUTEN_FREE];
 
@@ -362,7 +333,6 @@ describe('Recipe Entity', () => {
                 'author-123',
                 createValidIngredientSections(),
                 createValidStepSections(),
-                undefined,
                 particularities,
             );
 

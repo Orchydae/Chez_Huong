@@ -35,8 +35,7 @@ describe('GetRecipeHandler', () => {
         4,
         'author-uuid-123',
         createValidIngredientSections(),
-        undefined,
-        { calories: 350, protein: 25 },
+        [],
         [ParticularityType.GLUTEN_FREE],
     );
 
@@ -48,7 +47,6 @@ describe('GetRecipeHandler', () => {
             save: jest.fn(),
             getRecipeIngredientsWithNutrition: jest.fn(),
             getRecipeServings: jest.fn(),
-            saveNutritionalInfo: jest.fn(),
         } as any;
 
         const module: TestingModule = await Test.createTestingModule({
@@ -105,7 +103,6 @@ describe('GetRecipeHandler', () => {
             expect(result!.id).toBe(1);
             expect(result!.title).toBe('Pho Bo');
             expect(result!.ingredientSections).toHaveLength(1);
-            expect(result!.nutritionalInfo?.calories).toBe(350);
             expect(result!.particularities).toContain(ParticularityType.GLUTEN_FREE);
         });
 
@@ -133,13 +130,13 @@ describe('GetRecipeHandler', () => {
                 2,
                 'author-123',
                 createValidIngredientSections(),
+                [],
             );
             mockRecipeRepository.findById.mockResolvedValue(recipeWithoutNutrition);
 
             const result = await handler.execute(2);
 
             expect(result).not.toBeNull();
-            expect(result!.nutritionalInfo).toBeUndefined();
             expect(result!.particularities).toBeUndefined();
         });
     });

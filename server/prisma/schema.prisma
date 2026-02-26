@@ -87,7 +87,6 @@ model Recipe {
   particularities Particularity[]
   stepSections    StepSection[]
   ingredientSections IngredientSection[]
-  nutritionalInfo NutritionalInfo?
   likes           Like[]
   comments        Comment[]
 }
@@ -245,50 +244,6 @@ model Comment {
   replies   Comment[] @relation("CommentReplies")
 }
 
-model NutritionalInfo {
-  id            Int    @id @default(autoincrement())
-  recipeId      Int    @unique
-  recipe        Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-
-  // Per serving values
-  servingSize   Float? // in grams
-
-  // Macronutrients
-  calories      Float? // kcal
-  protein       Float? // g
-  carbohydrates Float? // g
-  fiber         Float? // g
-  sugar         Float? // g
-
-  // Fats (detailed breakdown)
-  totalFat      Float? // g
-  saturatedFat  Float? // g
-  monounsatFat  Float? // g (monounsaturated)
-  polyunsatFat  Float? // g (polyunsaturated)
-  transFat      Float? // g
-  cholesterol   Float? // mg
-
-  // Minerals
-  sodium        Float? // mg
-  potassium     Float? // mg
-  calcium       Float? // mg
-  iron          Float? // mg
-  magnesium     Float? // mg
-  zinc          Float? // mg
-
-  // Vitamins
-  vitaminA      Float? // mcg (RAE)
-  vitaminC      Float? // mg
-  vitaminD      Float? // mcg
-  vitaminE      Float? // mg
-  vitaminK      Float? // mcg
-  vitaminB6     Float? // mg
-  vitaminB12    Float? // mcg
-  folate        Float? // mcg
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
 
 model AuditLog {
   id          Int      @id @default(autoincrement())

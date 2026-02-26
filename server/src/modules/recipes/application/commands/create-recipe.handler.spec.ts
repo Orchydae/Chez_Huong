@@ -27,7 +27,6 @@ describe('CreateRecipeHandler', () => {
             save: jest.fn(),
             getRecipeIngredientsWithNutrition: jest.fn(),
             getRecipeServings: jest.fn(),
-            saveNutritionalInfo: jest.fn(),
         } as any;
 
         mockIngredientsRepository = {
@@ -91,7 +90,6 @@ describe('CreateRecipeHandler', () => {
             'author-uuid-123',
             createValidIngredientSections(),
             createValidStepSections(),
-            { calories: 350, protein: 25 },
             [ParticularityType.GLUTEN_FREE],
         );
     };
@@ -234,7 +232,6 @@ describe('CreateRecipeHandler', () => {
                 'author-123',
                 createValidIngredientSections(),
                 createValidStepSections(),
-                undefined, // No nutritional info
                 undefined, // No particularities
             );
 

@@ -12,7 +12,6 @@ export class PrismaRecipeRepository implements IRecipesRepository {
     async findAll(): Promise<Recipe[]> {
         const recipes = await this.prisma.recipe.findMany({
             include: {
-                nutritionalInfo: true,
                 ingredientSections: {
                     include: { ingredients: true },
                 },
@@ -29,7 +28,6 @@ export class PrismaRecipeRepository implements IRecipesRepository {
         const recipe = await this.prisma.recipe.findUnique({
             where: { id },
             include: {
-                nutritionalInfo: true,
                 ingredientSections: {
                     include: { ingredients: true },
                 },
@@ -78,39 +76,6 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             };
         }
 
-        // Add nutritionalInfo if provided
-        if (recipe.nutritionalInfo) {
-            data.nutritionalInfo = {
-                create: {
-                    calories: recipe.nutritionalInfo.calories,
-                    protein: recipe.nutritionalInfo.protein,
-                    carbohydrates: recipe.nutritionalInfo.carbohydrates,
-                    fiber: recipe.nutritionalInfo.fiber,
-                    sugar: recipe.nutritionalInfo.sugar,
-                    totalFat: recipe.nutritionalInfo.totalFat,
-                    saturatedFat: recipe.nutritionalInfo.saturatedFat,
-                    monounsatFat: recipe.nutritionalInfo.monounsatFat,
-                    polyunsatFat: recipe.nutritionalInfo.polyunsatFat,
-                    transFat: recipe.nutritionalInfo.transFat,
-                    cholesterol: recipe.nutritionalInfo.cholesterol,
-                    sodium: recipe.nutritionalInfo.sodium,
-                    potassium: recipe.nutritionalInfo.potassium,
-                    calcium: recipe.nutritionalInfo.calcium,
-                    iron: recipe.nutritionalInfo.iron,
-                    magnesium: recipe.nutritionalInfo.magnesium,
-                    zinc: recipe.nutritionalInfo.zinc,
-                    vitaminA: recipe.nutritionalInfo.vitaminA,
-                    vitaminC: recipe.nutritionalInfo.vitaminC,
-                    vitaminD: recipe.nutritionalInfo.vitaminD,
-                    vitaminE: recipe.nutritionalInfo.vitaminE,
-                    vitaminK: recipe.nutritionalInfo.vitaminK,
-                    vitaminB6: recipe.nutritionalInfo.vitaminB6,
-                    vitaminB12: recipe.nutritionalInfo.vitaminB12,
-                    folate: recipe.nutritionalInfo.folate,
-                }
-            };
-        }
-
         // Add particularities if provided
         if (recipe.particularities && recipe.particularities.length > 0) {
             data.particularities = {
@@ -141,7 +106,6 @@ export class PrismaRecipeRepository implements IRecipesRepository {
         const saved = await this.prisma.recipe.create({
             data,
             include: {
-                nutritionalInfo: true,
                 ingredientSections: {
                     include: { ingredients: true },
                 },
@@ -219,66 +183,5 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             select: { servings: true },
         });
         return recipe?.servings ?? null;
-    }
-
-    async saveNutritionalInfo(recipeId: number, nutrition: Record<string, number | null>): Promise<void> {
-        await this.prisma.nutritionalInfo.upsert({
-            where: { recipeId },
-            update: {
-                calories: nutrition.calories,
-                protein: nutrition.protein,
-                carbohydrates: nutrition.carbohydrates,
-                fiber: nutrition.fiber,
-                sugar: nutrition.sugar,
-                totalFat: nutrition.totalFat,
-                saturatedFat: nutrition.saturatedFat,
-                monounsatFat: nutrition.monounsatFat,
-                polyunsatFat: nutrition.polyunsatFat,
-                transFat: nutrition.transFat,
-                cholesterol: nutrition.cholesterol,
-                sodium: nutrition.sodium,
-                potassium: nutrition.potassium,
-                calcium: nutrition.calcium,
-                iron: nutrition.iron,
-                magnesium: nutrition.magnesium,
-                zinc: nutrition.zinc,
-                vitaminA: nutrition.vitaminA,
-                vitaminC: nutrition.vitaminC,
-                vitaminD: nutrition.vitaminD,
-                vitaminE: nutrition.vitaminE,
-                vitaminK: nutrition.vitaminK,
-                vitaminB6: nutrition.vitaminB6,
-                vitaminB12: nutrition.vitaminB12,
-                folate: nutrition.folate,
-            },
-            create: {
-                recipeId,
-                calories: nutrition.calories,
-                protein: nutrition.protein,
-                carbohydrates: nutrition.carbohydrates,
-                fiber: nutrition.fiber,
-                sugar: nutrition.sugar,
-                totalFat: nutrition.totalFat,
-                saturatedFat: nutrition.saturatedFat,
-                monounsatFat: nutrition.monounsatFat,
-                polyunsatFat: nutrition.polyunsatFat,
-                transFat: nutrition.transFat,
-                cholesterol: nutrition.cholesterol,
-                sodium: nutrition.sodium,
-                potassium: nutrition.potassium,
-                calcium: nutrition.calcium,
-                iron: nutrition.iron,
-                magnesium: nutrition.magnesium,
-                zinc: nutrition.zinc,
-                vitaminA: nutrition.vitaminA,
-                vitaminC: nutrition.vitaminC,
-                vitaminD: nutrition.vitaminD,
-                vitaminE: nutrition.vitaminE,
-                vitaminK: nutrition.vitaminK,
-                vitaminB6: nutrition.vitaminB6,
-                vitaminB12: nutrition.vitaminB12,
-                folate: nutrition.folate,
-            },
-        });
     }
 }

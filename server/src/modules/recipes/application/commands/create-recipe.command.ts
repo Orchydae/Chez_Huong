@@ -7,7 +7,6 @@
  */
 
 import type {
-    NutritionalInfo,
     ParticularityType,
     TimeUnit,
     RecipeIngredient,
@@ -45,7 +44,6 @@ export class CreateRecipeCommand {
         public readonly authorId: string,
         public readonly ingredientSections: IngredientSection[],
         public readonly stepSections: StepSection[],
-        public readonly nutritionalInfo?: NutritionalInfo,
         public readonly particularities?: ParticularityType[],
     ) { }
 }

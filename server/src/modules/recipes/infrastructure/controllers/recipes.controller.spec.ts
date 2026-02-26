@@ -46,7 +46,6 @@ describe('RecipesController', () => {
 
         mockNutritionalValueService = {
             calculateRecipeNutrition: jest.fn(),
-            calculateAndSaveRecipeNutrition: jest.fn(),
         } as any;
 
         const module: TestingModule = await Test.createTestingModule({
@@ -246,24 +245,6 @@ describe('RecipesController', () => {
             const result = await controller.getRecipeNutrition('1');
 
             expect(mockNutritionalValueService.calculateRecipeNutrition).toHaveBeenCalledWith(1);
-            expect(result).toEqual(nutritionResult);
-        });
-    });
-
-    describe('calculateRecipeNutrition', () => {
-        it('should call nutritionalValueService.calculateAndSaveRecipeNutrition', async () => {
-            const nutritionResult = {
-                perServing: { calories: 350, protein: 25 },
-                total: { calories: 1400, protein: 100 },
-                servings: 4,
-                ingredientsProcessed: 5,
-                ingredientsSkipped: [],
-            };
-            mockNutritionalValueService.calculateAndSaveRecipeNutrition.mockResolvedValue(nutritionResult as any);
-
-            const result = await controller.calculateRecipeNutrition('1');
-
-            expect(mockNutritionalValueService.calculateAndSaveRecipeNutrition).toHaveBeenCalledWith(1);
             expect(result).toEqual(nutritionResult);
         });
     });

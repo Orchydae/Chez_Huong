@@ -4,6 +4,10 @@ title Chez Huong — Class Diagram
 skinparam componentStyle rectangle
 skinparam defaultFontName Monospace
 
+' ===========================================================================
+' AUTH MODULE
+' ===========================================================================
+
 class Utilisateur {
     +nom: string
     +prenom: string
@@ -12,50 +16,139 @@ class Utilisateur {
     +role: Role
 }
 
-class Recette {
-    +nom: string
+' ===========================================================================
+' RECIPE MODULE — DOMAIN ENTITIES & VALUE OBJECTS
+' ===========================================================================
+
+class Recette <<Aggregate Root>> {
+    +id: number
+    +title: string
+    +title_fr: string
     +description: string
-    +tempsPrepa: number
-    +tempsCuisson: number
-    +difficulte: Difficulty
-    +type: RecipeType
+    +description_fr: string
+    +prepTime: number
+    +prepTimeUnit: TimeUnit
+    +cookTime: number
+    +cookTimeUnit: TimeUnit
+    +difficulty: string
+    +type: string
     +cuisine: string
-    +portion: number
-    +utilisateur: Utilisateur
+    +servings: number
+    +authorId: string
+    +particularities: ParticularityType[]
+    {static} +create(…): Recipe
 }
 
-class Particularite {
-    +nom: string
+enum ParticularityType {
+    VEGETARIAN
+    VEGAN
+    GLUTEN_FREE
+    DAIRY_FREE
+    NUT_FREE
+    EGG_FREE
+    SEAFOOD_FREE
+    SOY_FREE
+    HALAL
+    KOSHER
+    LOW_SODIUM
+    LOW_SUGAR
+    LOW_CARB
+    HIGH_PROTEIN
 }
 
-class StepSection {
-    +nom: string
-    +recette: Recette
+enum TimeUnit {
+    MINUTES
+    HOURS
 }
 
-class Step {
-    +ordre: number
-    +nom: string
+class IngredientSection <<Value Object>> {
+    +name: string
+    +name_fr: string
+}
+
+class RecipeIngredient <<Value Object>> {
+    +ingredientId: number
+    +quantity: string
+    +unit: string
+}
+
+class StepSection <<Value Object>> {
+    +title: string
+    +title_fr: string
+}
+
+class Step <<Value Object>> {
+    +order: number
     +description: string
-    +stepSection: StepSection
+    +description_fr: string
     +mediaUrl: string
 }
 
-class IngredientSection {
-    +nom: string
-    +recette: Recette
-}
+' ===========================================================================
+' RECIPE MODULE — INGREDIENT ENTITIES
+' ===========================================================================
 
 class Ingredient {
-    +nom: string
+    +id: number
+    +name: string
     +fdcId: number
 }
 
-class RecipeIngredient {
-    +ingredient: Ingredient
-    +quantite: string
-    +unit: string
+class IngredientNutrition {
+    +id: number
+    +ingredientId: number
+    +servingSize: number
 }
+
+class IngredientPortion {
+    +id: number
+    +ingredientId: number
+    +portionName: string
+    +gramWeight: number
+}
+
+' ===========================================================================
+' SHARED — NUTRIENT VALUES
+' ===========================================================================
+
+interface NutrientValues <<Shared>> {
+    +calories: number
+    +protein: number
+    +carbohydrates: number
+    +fiber / sugar: number
+    +totalFat / saturatedFat / …: number
+    +sodium / potassium / …: number
+    +vitaminA / vitaminC / …: number
+    __(25 nutrient fields)__
+}
+
+' ===========================================================================
+' RECIPE MODULE — USDA EXTERNAL DATA TYPES
+' ===========================================================================
+
+class UsdaFoodMatch <<External>> {
+    +fdcId: number
+    +name: string
+    +description: string
+    +dataType: string
+}
+
+class UsdaNutritionData <<External>> {
+    +calories: number
+    +protein: number
+    +carbohydrates: number
+    +totalFat: number
+    … (vitamins & minerals)
+}
+
+class UsdaPortionData <<External>> {
+    +portionName: string
+    +gramWeight: number
+}
+
+' ===========================================================================
+' SOCIAL FEATURES
+' ===========================================================================
 
 class Like {
     +utilisateur: Utilisateur
@@ -69,28 +162,46 @@ class Comment {
     +date: Date
 }
 
-class CalculNutritionnel {
-    +recette: Recette
-    +calories: number
-    +proteines: number
-    +lipides: number
-    +carbohydrates: number
-}
+' ===========================================================================
+' RELATIONSHIPS — Recipe Structure
+' ===========================================================================
 
 Utilisateur "1" --> "*" Recette: Consulte/Écrit/Modifie
 
-Recette "1" --> "*" IngredientSection: Contient
-IngredientSection "1" --> "*" RecipeIngredient: Contient
-RecipeIngredient "*" --> "1" Ingredient: Est défini par
+Recette "1" --> "*" IngredientSection: contient
+IngredientSection "1" --> "*" RecipeIngredient: contient
+RecipeIngredient "*" --> "1" Ingredient: référence par ingredientId
 
-Recette "*" --> "*" Particularite: Possède
+Recette "1" --> "*" StepSection: contient
+StepSection "1" --> "*" Step: contient
 
-Recette "1" --> "1" CalculNutritionnel: Analyse
+Recette "*" --> "*" ParticularityType: possède
+
+' ===========================================================================
+' RELATIONSHIPS — Ingredient → Nutrition / Portions
+' ===========================================================================
+
+Ingredient "1" --> "0..1" IngredientNutrition: valeurs per 100 g
+IngredientNutrition --|> NutrientValues: extends
+Ingredient "1" --> "*" IngredientPortion: conversions unité→gramme
+
+UsdaNutritionData --|> NutrientValues: Partial
+
+' ===========================================================================
+' RELATIONSHIPS — USDA External Data
+' ===========================================================================
+
+Ingredient "0..1" ..> "0..1" UsdaFoodMatch: lié via fdcId
+UsdaFoodMatch ..> UsdaNutritionData: fournit données nutritionnelles
+UsdaFoodMatch ..> UsdaPortionData: fournit portions
+
+
+' ===========================================================================
+' RELATIONSHIPS — Social Features
+' ===========================================================================
+
 Recette "1" <-- "*" Like: Concerne
 Recette "1" <-- "*" Comment: Concerne
-Recette "1" --> "*" StepSection: Contient
-StepSection "1" --> "*" Step: Contient
-
 Utilisateur "1" --> "*" Like: Like/Dislike
 Utilisateur "1" --> "*" Comment: Commente
 Comment "1" --> "*" Comment: Répond

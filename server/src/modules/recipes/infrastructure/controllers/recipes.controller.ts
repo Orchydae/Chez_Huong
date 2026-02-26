@@ -66,7 +66,6 @@ export class RecipesController {
             dto.authorId,
             ingredientSections,
             stepSections,
-            dto.nutritionalInfo,
             dto.particularities,
         );
 
@@ -84,18 +83,10 @@ export class RecipesController {
     }
 
     /**
-     * Calculate nutritional info for a recipe (preview, does not save)
+     * Calculate nutritional info for a recipe on demand (not saved to DB)
      */
     @Get(':id/nutrition')
     async getRecipeNutrition(@Param('id') id: string) {
         return this.nutritionalValueService.calculateRecipeNutrition(+id);
-    }
-
-    /**
-     * Calculate and save nutritional info for a recipe
-     */
-    @Post(':id/nutrition/calculate')
-    async calculateRecipeNutrition(@Param('id') id: string) {
-        return this.nutritionalValueService.calculateAndSaveRecipeNutrition(+id);
     }
 }

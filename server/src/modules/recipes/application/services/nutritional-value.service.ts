@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { IIngredientsRepository } from '../../domain/ports/ingredients.port';
 import { IRecipesRepository, RecipeIngredientWithNutrition } from '../../domain/ports/recipe.port';
+import { NutrientValues, RequiredNutrients, NUTRIENT_KEYS } from '../../domain/entities/nutrient-values.interface';
 
 /**
  * Volume to mL conversions
@@ -59,37 +60,9 @@ const NEGLIGIBLE_UNITS = new Set([
     'as needed',
 ]);
 
-export interface NutritionalInfo {
-    calories: number;
-    protein: number;
-    carbohydrates: number;
-    fiber: number;
-    sugar: number;
-    totalFat: number;
-    saturatedFat: number;
-    monounsatFat: number;
-    polyunsatFat: number;
-    transFat: number;
-    cholesterol: number;
-    sodium: number;
-    potassium: number;
-    calcium: number;
-    iron: number;
-    magnesium: number;
-    zinc: number;
-    vitaminA: number;
-    vitaminC: number;
-    vitaminD: number;
-    vitaminE: number;
-    vitaminK: number;
-    vitaminB6: number;
-    vitaminB12: number;
-    folate: number;
-}
-
 export interface CalculationResult {
-    perServing: NutritionalInfo;
-    total: NutritionalInfo;
+    perServing: RequiredNutrients;
+    total: RequiredNutrients;
     servings: number;
     ingredientsProcessed: number;
     ingredientsSkipped: string[];
@@ -238,136 +211,48 @@ export class NutritionalValueService {
     }
 
     /**
-     * Create an empty NutritionalInfo object with all zeros
+     * Create an empty RequiredNutrients object with all zeros
      */
-    createEmptyNutrition(): NutritionalInfo {
-        return {
-            calories: 0,
-            protein: 0,
-            carbohydrates: 0,
-            fiber: 0,
-            sugar: 0,
-            totalFat: 0,
-            saturatedFat: 0,
-            monounsatFat: 0,
-            polyunsatFat: 0,
-            transFat: 0,
-            cholesterol: 0,
-            sodium: 0,
-            potassium: 0,
-            calcium: 0,
-            iron: 0,
-            magnesium: 0,
-            zinc: 0,
-            vitaminA: 0,
-            vitaminC: 0,
-            vitaminD: 0,
-            vitaminE: 0,
-            vitaminK: 0,
-            vitaminB6: 0,
-            vitaminB12: 0,
-            folate: 0,
-        };
+    createEmptyNutrition(): RequiredNutrients {
+        const result = {} as RequiredNutrients;
+        for (const key of NUTRIENT_KEYS) {
+            result[key] = 0;
+        }
+        return result;
     }
 
     /**
-     * Add two NutritionalInfo objects together
+     * Add two nutrition objects together
      */
-    addNutrition(a: NutritionalInfo, b: Partial<NutritionalInfo>): NutritionalInfo {
-        return {
-            calories: a.calories + (b.calories ?? 0),
-            protein: a.protein + (b.protein ?? 0),
-            carbohydrates: a.carbohydrates + (b.carbohydrates ?? 0),
-            fiber: a.fiber + (b.fiber ?? 0),
-            sugar: a.sugar + (b.sugar ?? 0),
-            totalFat: a.totalFat + (b.totalFat ?? 0),
-            saturatedFat: a.saturatedFat + (b.saturatedFat ?? 0),
-            monounsatFat: a.monounsatFat + (b.monounsatFat ?? 0),
-            polyunsatFat: a.polyunsatFat + (b.polyunsatFat ?? 0),
-            transFat: a.transFat + (b.transFat ?? 0),
-            cholesterol: a.cholesterol + (b.cholesterol ?? 0),
-            sodium: a.sodium + (b.sodium ?? 0),
-            potassium: a.potassium + (b.potassium ?? 0),
-            calcium: a.calcium + (b.calcium ?? 0),
-            iron: a.iron + (b.iron ?? 0),
-            magnesium: a.magnesium + (b.magnesium ?? 0),
-            zinc: a.zinc + (b.zinc ?? 0),
-            vitaminA: a.vitaminA + (b.vitaminA ?? 0),
-            vitaminC: a.vitaminC + (b.vitaminC ?? 0),
-            vitaminD: a.vitaminD + (b.vitaminD ?? 0),
-            vitaminE: a.vitaminE + (b.vitaminE ?? 0),
-            vitaminK: a.vitaminK + (b.vitaminK ?? 0),
-            vitaminB6: a.vitaminB6 + (b.vitaminB6 ?? 0),
-            vitaminB12: a.vitaminB12 + (b.vitaminB12 ?? 0),
-            folate: a.folate + (b.folate ?? 0),
-        };
+    addNutrition(a: RequiredNutrients, b: Partial<NutrientValues>): RequiredNutrients {
+        const result = {} as RequiredNutrients;
+        for (const key of NUTRIENT_KEYS) {
+            result[key] = a[key] + (b[key] ?? 0);
+        }
+        return result;
     }
 
     /**
      * Scale nutrition values by a factor (for converting per-100g to actual grams)
      */
-    scaleNutrition(nutrition: Partial<NutritionalInfo>, factor: number): Partial<NutritionalInfo> {
-        return {
-            calories: (nutrition.calories ?? 0) * factor,
-            protein: (nutrition.protein ?? 0) * factor,
-            carbohydrates: (nutrition.carbohydrates ?? 0) * factor,
-            fiber: (nutrition.fiber ?? 0) * factor,
-            sugar: (nutrition.sugar ?? 0) * factor,
-            totalFat: (nutrition.totalFat ?? 0) * factor,
-            saturatedFat: (nutrition.saturatedFat ?? 0) * factor,
-            monounsatFat: (nutrition.monounsatFat ?? 0) * factor,
-            polyunsatFat: (nutrition.polyunsatFat ?? 0) * factor,
-            transFat: (nutrition.transFat ?? 0) * factor,
-            cholesterol: (nutrition.cholesterol ?? 0) * factor,
-            sodium: (nutrition.sodium ?? 0) * factor,
-            potassium: (nutrition.potassium ?? 0) * factor,
-            calcium: (nutrition.calcium ?? 0) * factor,
-            iron: (nutrition.iron ?? 0) * factor,
-            magnesium: (nutrition.magnesium ?? 0) * factor,
-            zinc: (nutrition.zinc ?? 0) * factor,
-            vitaminA: (nutrition.vitaminA ?? 0) * factor,
-            vitaminC: (nutrition.vitaminC ?? 0) * factor,
-            vitaminD: (nutrition.vitaminD ?? 0) * factor,
-            vitaminE: (nutrition.vitaminE ?? 0) * factor,
-            vitaminK: (nutrition.vitaminK ?? 0) * factor,
-            vitaminB6: (nutrition.vitaminB6 ?? 0) * factor,
-            vitaminB12: (nutrition.vitaminB12 ?? 0) * factor,
-            folate: (nutrition.folate ?? 0) * factor,
-        };
+    scaleNutrition(nutrition: Partial<NutrientValues>, factor: number): Partial<NutrientValues> {
+        const result: Partial<NutrientValues> = {};
+        for (const key of NUTRIENT_KEYS) {
+            result[key] = (nutrition[key] ?? 0) * factor;
+        }
+        return result;
     }
 
     /**
      * Divide nutrition values by servings
      */
-    divideByServings(nutrition: NutritionalInfo, servings: number): NutritionalInfo {
+    divideByServings(nutrition: RequiredNutrients, servings: number): RequiredNutrients {
         if (servings <= 0) servings = 1;
-        return {
-            calories: nutrition.calories / servings,
-            protein: nutrition.protein / servings,
-            carbohydrates: nutrition.carbohydrates / servings,
-            fiber: nutrition.fiber / servings,
-            sugar: nutrition.sugar / servings,
-            totalFat: nutrition.totalFat / servings,
-            saturatedFat: nutrition.saturatedFat / servings,
-            monounsatFat: nutrition.monounsatFat / servings,
-            polyunsatFat: nutrition.polyunsatFat / servings,
-            transFat: nutrition.transFat / servings,
-            cholesterol: nutrition.cholesterol / servings,
-            sodium: nutrition.sodium / servings,
-            potassium: nutrition.potassium / servings,
-            calcium: nutrition.calcium / servings,
-            iron: nutrition.iron / servings,
-            magnesium: nutrition.magnesium / servings,
-            zinc: nutrition.zinc / servings,
-            vitaminA: nutrition.vitaminA / servings,
-            vitaminC: nutrition.vitaminC / servings,
-            vitaminD: nutrition.vitaminD / servings,
-            vitaminE: nutrition.vitaminE / servings,
-            vitaminK: nutrition.vitaminK / servings,
-            vitaminB6: nutrition.vitaminB6 / servings,
-            vitaminB12: nutrition.vitaminB12 / servings,
-            folate: nutrition.folate / servings,
-        };
+        const result = {} as RequiredNutrients;
+        for (const key of NUTRIENT_KEYS) {
+            result[key] = nutrition[key] / servings;
+        }
+        return result;
     }
 
     /**
@@ -408,35 +293,8 @@ export class NutritionalValueService {
             // Calculate scaling factor (nutrition is per 100g)
             const scaleFactor = grams / 100;
 
-            // Scale and add nutrition (convert nulls to 0)
-            const nutritionForScaling: Partial<NutritionalInfo> = {
-                calories: ingredient.nutrition.calories ?? 0,
-                protein: ingredient.nutrition.protein ?? 0,
-                carbohydrates: ingredient.nutrition.carbohydrates ?? 0,
-                fiber: ingredient.nutrition.fiber ?? 0,
-                sugar: ingredient.nutrition.sugar ?? 0,
-                totalFat: ingredient.nutrition.totalFat ?? 0,
-                saturatedFat: ingredient.nutrition.saturatedFat ?? 0,
-                monounsatFat: ingredient.nutrition.monounsatFat ?? 0,
-                polyunsatFat: ingredient.nutrition.polyunsatFat ?? 0,
-                transFat: ingredient.nutrition.transFat ?? 0,
-                cholesterol: ingredient.nutrition.cholesterol ?? 0,
-                sodium: ingredient.nutrition.sodium ?? 0,
-                potassium: ingredient.nutrition.potassium ?? 0,
-                calcium: ingredient.nutrition.calcium ?? 0,
-                iron: ingredient.nutrition.iron ?? 0,
-                magnesium: ingredient.nutrition.magnesium ?? 0,
-                zinc: ingredient.nutrition.zinc ?? 0,
-                vitaminA: ingredient.nutrition.vitaminA ?? 0,
-                vitaminC: ingredient.nutrition.vitaminC ?? 0,
-                vitaminD: ingredient.nutrition.vitaminD ?? 0,
-                vitaminE: ingredient.nutrition.vitaminE ?? 0,
-                vitaminK: ingredient.nutrition.vitaminK ?? 0,
-                vitaminB6: ingredient.nutrition.vitaminB6 ?? 0,
-                vitaminB12: ingredient.nutrition.vitaminB12 ?? 0,
-                folate: ingredient.nutrition.folate ?? 0,
-            };
-            const scaledNutrition = this.scaleNutrition(nutritionForScaling, scaleFactor);
+            // Scale and add nutrition
+            const scaledNutrition = this.scaleNutrition(ingredient.nutrition, scaleFactor);
             totalNutrition = this.addNutrition(totalNutrition, scaledNutrition);
             ingredientsProcessed++;
         }
@@ -452,16 +310,6 @@ export class NutritionalValueService {
             ingredientsSkipped,
         };
     }
-
-    /**
-     * Calculate and save nutritional info for a recipe
-     */
-    async calculateAndSaveRecipeNutrition(recipeId: number): Promise<CalculationResult> {
-        const result = await this.calculateRecipeNutrition(recipeId);
-
-        // Save per-serving values to the database
-        await this.recipesRepository.saveNutritionalInfo(recipeId, result.perServing as unknown as Record<string, number | null>);
-
-        return result;
-    }
 }
+
+

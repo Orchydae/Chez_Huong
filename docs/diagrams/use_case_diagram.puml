@@ -8,7 +8,8 @@ skinparam usecase {
 }
 left to right direction
 
-actor Utilisateur
+actor "Utilisateur" <<USER>> as Utilisateur
+actor "Writer" <<WRITER>> as Writer
 actor "Système de calcul nutritionnel" as SCN
 
 rectangle "Chez Huong" as CH {
@@ -21,13 +22,14 @@ rectangle "Chez Huong" as CH {
     usecase "UC-07\nCalculer les valeurs nutritives" as UC07
 }
 
-Utilisateur --> UC01
+Utilisateur <|-- Writer
+Writer --> UC01
+Writer --> UC03
+Writer --> UC04
 Utilisateur --> UC02
-Utilisateur --> UC03
-Utilisateur --> UC04
 Utilisateur --> UC05
 Utilisateur --> UC06
-SCN --> UC07
+UC07 <-- SCN
 
 
 @enduml

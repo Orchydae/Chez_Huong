@@ -1,3 +1,5 @@
+import type { NutrientValues } from '../entities/nutrient-values.interface';
+
 export interface UsdaFoodMatch {
     fdcId: number;
     name: string;
@@ -14,40 +16,12 @@ export interface UsdaPortionData {
     gramWeight: number;   // grams per 1 unit
 }
 
-export interface UsdaNutritionData {
-    // Macronutrients
-    calories?: number;      // kcal
-    protein?: number;       // g
-    carbohydrates?: number; // g
-    fiber?: number;         // g
-    sugar?: number;         // g
-
-    // Fats (detailed breakdown)
-    totalFat?: number;      // g
-    saturatedFat?: number;  // g
-    monounsatFat?: number;  // g
-    polyunsatFat?: number;  // g
-    transFat?: number;      // g
-    cholesterol?: number;   // mg
-
-    // Minerals
-    sodium?: number;        // mg
-    potassium?: number;     // mg
-    calcium?: number;       // mg
-    iron?: number;          // mg
-    magnesium?: number;     // mg
-    zinc?: number;          // mg
-
-    // Vitamins
-    vitaminA?: number;      // mcg (RAE)
-    vitaminC?: number;      // mg
-    vitaminD?: number;      // mcg
-    vitaminE?: number;      // mg
-    vitaminK?: number;      // mcg
-    vitaminB6?: number;     // mg
-    vitaminB12?: number;    // mcg
-    folate?: number;        // mcg
-}
+/**
+ * Nutrition data from USDA FoodData Central (per 100g).
+ * A partial view of the shared NutrientValues — fields are optional
+ * because the USDA API may not provide all nutrients for every food.
+ */
+export type UsdaNutritionData = Partial<NutrientValues>;
 
 export interface UsdaPort {
     /**

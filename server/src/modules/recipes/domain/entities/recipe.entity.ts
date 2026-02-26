@@ -18,41 +18,7 @@
  * - Each StepSection MUST have at least one Step
  */
 
-// ============================================================================
-// NUTRITIONAL INFO INTERFACE
-// ============================================================================
 
-/**
- * Nutritional information for a recipe (per serving or total).
- * All values are optional as not all recipes have complete nutritional data.
- */
-export interface NutritionalInfo {
-    calories?: number | null;
-    protein?: number | null;
-    carbohydrates?: number | null;
-    fiber?: number | null;
-    sugar?: number | null;
-    totalFat?: number | null;
-    saturatedFat?: number | null;
-    monounsatFat?: number | null;
-    polyunsatFat?: number | null;
-    transFat?: number | null;
-    cholesterol?: number | null;
-    sodium?: number | null;
-    potassium?: number | null;
-    calcium?: number | null;
-    iron?: number | null;
-    magnesium?: number | null;
-    zinc?: number | null;
-    vitaminA?: number | null;
-    vitaminC?: number | null;
-    vitaminD?: number | null;
-    vitaminE?: number | null;
-    vitaminK?: number | null;
-    vitaminB6?: number | null;
-    vitaminB12?: number | null;
-    folate?: number | null;
-}
 
 // ============================================================================
 // ENUMS
@@ -274,7 +240,6 @@ export class Recipe {
         public authorId: string,
         public ingredientSections: IngredientSection[],
         public stepSections: StepSection[],
-        public nutritionalInfo?: NutritionalInfo | null,
         public particularities?: ParticularityType[],
     ) { }
 
@@ -315,7 +280,6 @@ export class Recipe {
         authorId: string,
         ingredientSections: IngredientSection[],
         stepSections: StepSection[],
-        nutritionalInfo?: NutritionalInfo | null,
         particularities?: ParticularityType[],
     ): Recipe {
         // Validate ingredient sections
@@ -348,7 +312,6 @@ export class Recipe {
             authorId,
             ingredientSections,
             stepSections,
-            nutritionalInfo,
             particularities,
         );
     }

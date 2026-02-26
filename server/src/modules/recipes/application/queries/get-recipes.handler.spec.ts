@@ -19,9 +19,9 @@ describe('GetRecipesHandler', () => {
 
     // Sample test data
     const mockRecipes: Recipe[] = [
-        new Recipe(1, 'Pho Bo', 'Soupe Pho', 'Vietnamese soup', 'Soupe vietnamienne', 30, TimeUnit.MINUTES, 120, TimeUnit.MINUTES, 'MEDIUM', 'SOUP', 'VIETNAMESE', 4, 'author-1', createValidIngredientSections()),
-        new Recipe(2, 'Banh Mi', 'Sandwich Banh Mi', 'Vietnamese sandwich', 'Sandwich vietnamien', 15, TimeUnit.MINUTES, 0, TimeUnit.MINUTES, 'EASY', 'SANDWICH', 'VIETNAMESE', 2, 'author-2', createValidIngredientSections()),
-        new Recipe(3, 'Com Tam', 'Riz Brisé', 'Broken rice dish', 'Plat de riz brisé', 20, TimeUnit.MINUTES, 25, TimeUnit.MINUTES, 'EASY', 'MAIN', 'VIETNAMESE', 1, 'author-1', createValidIngredientSections()),
+        new Recipe(1, 'Pho Bo', 'Soupe Pho', 'Vietnamese soup', 'Soupe vietnamienne', 30, TimeUnit.MINUTES, 120, TimeUnit.MINUTES, 'MEDIUM', 'SOUP', 'VIETNAMESE', 4, 'author-1', createValidIngredientSections(), []),
+        new Recipe(2, 'Banh Mi', 'Sandwich Banh Mi', 'Vietnamese sandwich', 'Sandwich vietnamien', 15, TimeUnit.MINUTES, 0, TimeUnit.MINUTES, 'EASY', 'SANDWICH', 'VIETNAMESE', 2, 'author-2', createValidIngredientSections(), []),
+        new Recipe(3, 'Com Tam', 'Riz Brisé', 'Broken rice dish', 'Plat de riz brisé', 20, TimeUnit.MINUTES, 25, TimeUnit.MINUTES, 'EASY', 'MAIN', 'VIETNAMESE', 1, 'author-1', createValidIngredientSections(), []),
     ];
 
     beforeEach(async () => {
@@ -32,7 +32,6 @@ describe('GetRecipesHandler', () => {
             save: jest.fn(),
             getRecipeIngredientsWithNutrition: jest.fn(),
             getRecipeServings: jest.fn(),
-            saveNutritionalInfo: jest.fn(),
         } as any;
 
         const module: TestingModule = await Test.createTestingModule({

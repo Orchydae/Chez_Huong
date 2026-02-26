@@ -52,7 +52,6 @@ export class CreateRecipeHandler {
                 command.authorId,
                 command.ingredientSections,
                 command.stepSections,
-                command.nutritionalInfo,
                 command.particularities,
             );
 
