@@ -1,4 +1,4 @@
-import { Recipe as PrismaRecipe, NutritionalInfo, IngredientSection as PrismaIngredientSection, RecipeIngredient as PrismaRecipeIngredient, StepSection as PrismaStepSection, Step as PrismaStep, RecipeParticularity } from '@prisma/client';
+import { Recipe as PrismaRecipe, NutritionalInfo, IngredientSection as PrismaIngredientSection, RecipeIngredient as PrismaRecipeIngredient, StepSection as PrismaStepSection, Step as PrismaStep, Particularity as PrismaParticularity } from '@prisma/client';
 import { Recipe, RecipeIngredient, IngredientSection, Step, StepSection, ParticularityType } from '../../../domain/entities/recipe.entity';
 
 /**
@@ -12,7 +12,7 @@ export type RecipeWithRelations = PrismaRecipe & {
     stepSections?: (PrismaStepSection & {
         steps: PrismaStep[];
     })[];
-    particularities?: RecipeParticularity[];
+    particularities?: PrismaParticularity[];
 };
 
 /**
@@ -39,7 +39,7 @@ export class RecipeMapper {
         }) || [];
 
         // Map step sections
-        const stepSections: StepSection[] | undefined = raw.stepSections?.map(section => {
+        const stepSections: StepSection[] = raw.stepSections?.map(section => {
             const steps = section.steps.map(step =>
                 new Step(step.order, step.description, step.description_fr, step.mediaUrl || undefined)
             );
@@ -48,7 +48,7 @@ export class RecipeMapper {
                 Object.create(StepSection.prototype),
                 { title: section.title, title_fr: section.title_fr, steps }
             ) as StepSection;
-        });
+        }) || [];
 
         // Map particularities
         const particularities = raw.particularities?.map(p => p.type as ParticularityType);
