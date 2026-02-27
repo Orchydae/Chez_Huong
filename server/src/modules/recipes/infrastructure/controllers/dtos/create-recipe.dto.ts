@@ -1,4 +1,4 @@
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested, ArrayMinSize, IsEnum } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, ValidateNested, ArrayMinSize, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateIngredientSectionDto } from './create-ingredient-section.dto';
 import { CreateStepSectionDto } from './create-step-section.dto';
@@ -56,6 +56,11 @@ export class CreateRecipeDto {
     @IsString()
     @IsNotEmpty()
     authorId!: string;
+
+    @IsString()
+    @IsUrl()
+    @IsOptional()
+    imageUrl?: string | null;
 
     @IsArray()
     @ValidateNested({ each: true })

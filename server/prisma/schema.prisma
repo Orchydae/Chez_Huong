@@ -80,6 +80,7 @@ model Recipe {
   type        RecipeType
   cuisine     String // e.g., "Vietnamese", "French"
   servings    Int
+  imageUrl    String? // Supabase Storage public URL
   
   authorId    String
   author      User    @relation(fields: [authorId], references: [id])

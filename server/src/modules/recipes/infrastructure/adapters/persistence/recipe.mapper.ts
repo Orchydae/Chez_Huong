@@ -71,6 +71,7 @@ export class RecipeMapper {
             ingredientSections,
             stepSections,
             particularities,
+            raw.imageUrl,
         );
     }
 }

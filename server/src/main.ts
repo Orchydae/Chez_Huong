@@ -13,6 +13,13 @@ async function bootstrap() {
     transform: true,            // Automatically transform payloads to DTO instances
   }));
 
+  // Allow the frontend dev server to call the backend
+  app.enableCors({
+    origin: process.env.CLIENT_URL ?? 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  });
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

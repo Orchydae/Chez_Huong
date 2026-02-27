@@ -241,6 +241,7 @@ export class Recipe {
         public ingredientSections: IngredientSection[],
         public stepSections: StepSection[],
         public particularities?: ParticularityType[],
+        public imageUrl?: string | null,
     ) { }
 
     /**
@@ -281,6 +282,7 @@ export class Recipe {
         ingredientSections: IngredientSection[],
         stepSections: StepSection[],
         particularities?: ParticularityType[],
+        imageUrl?: string | null,
     ): Recipe {
         // Validate ingredient sections
         if (!ingredientSections || ingredientSections.length === 0) {
@@ -313,6 +315,7 @@ export class Recipe {
             ingredientSections,
             stepSections,
             particularities,
+            imageUrl,
         );
     }
 }

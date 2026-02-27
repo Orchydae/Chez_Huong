@@ -1,50 +1,56 @@
 import { Heart, Clock, Star } from 'lucide-react';
+import type { RecipeDTO } from '../hooks/useRecipes';
 
-export interface Recipe {
-    id: number;
-    title: string;
-    reviews: number;
-    time: string;
-    image: string;
-    favorite: boolean;
+// Helper: format prepTime + cookTime into a display string
+function formatTotalTime(prepTime: number, prepUnit: string, cookTime: number, cookUnit: string): string {
+    const toMinutes = (val: number, unit: string) => unit === 'HOURS' ? val * 60 : val;
+    const total = toMinutes(prepTime, prepUnit) + toMinutes(cookTime, cookUnit);
+    if (total >= 60) {
+        const h = Math.floor(total / 60);
+        const m = total % 60;
+        return m > 0 ? `${h}h ${m}min` : `${h}h`;
+    }
+    return `${total} min`;
 }
 
+// Fallback image when no imageUrl is set
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1582878826629-29b7ad1cb438?auto=format&fit=crop&q=80&w=800';
+
 interface RecipeCardProps {
-    recipe: Recipe;
+    recipe: RecipeDTO;
 }
 
 export default function RecipeCard({ recipe }: RecipeCardProps) {
+    const totalTime = formatTotalTime(recipe.prepTime, recipe.prepTimeUnit, recipe.cookTime, recipe.cookTimeUnit);
+
     return (
         <div className="recipe-card">
             <div className="recipe-image-container">
-                <img src={recipe.image} alt={recipe.title} className="recipe-image" />
-                <button className={`favorite-btn ${recipe.favorite ? 'active' : ''}`}>
-                    <Heart
-                        size={24}
-                        fill={recipe.favorite ? "var(--accent-secondary)" : "transparent"}
-                        color={recipe.favorite ? "var(--accent-secondary)" : "white"}
-                    />
+                <img
+                    src={recipe.imageUrl ?? FALLBACK_IMAGE}
+                    alt={recipe.title_fr ?? recipe.title}
+                    className="recipe-image"
+                />
+                <button className="favorite-btn">
+                    <Heart size={24} fill="transparent" color="white" />
                 </button>
             </div>
 
             <div className="recipe-content">
-                <h3 className="recipe-card-title">{recipe.title}</h3>
+                <h3 className="recipe-card-title">{recipe.title_fr ?? recipe.title}</h3>
 
                 <div className="recipe-meta">
                     <div className="recipe-rating">
                         <div className="stars">
-                            <Star size={12} fill="var(--text-primary)" color="var(--text-primary)" />
-                            <Star size={12} fill="var(--text-primary)" color="var(--text-primary)" />
-                            <Star size={12} fill="var(--text-primary)" color="var(--text-primary)" />
-                            <Star size={12} fill="var(--text-primary)" color="var(--text-primary)" />
-                            <Star size={12} fill="var(--text-primary)" color="var(--text-primary)" />
+                            {[...Array(5)].map((_, i) => (
+                                <Star key={i} size={12} fill="var(--text-primary)" color="var(--text-primary)" />
+                            ))}
                         </div>
-                        <span className="reviews-count">{recipe.reviews}</span>
                     </div>
 
                     <div className="recipe-time">
                         <Clock size={14} />
-                        <span>{recipe.time}</span>
+                        <span>{totalTime}</span>
                     </div>
                 </div>
             </div>
