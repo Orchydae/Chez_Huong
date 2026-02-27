@@ -1,0 +1,87 @@
+/* Navigation */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-fixed {
+    position: fixed;
+    top: 40px;
+    /* Approximately match navbar vertical padding adjusting for image box */
+    left: 50px;
+    /* Matches navbar horizontal padding */
+    z-index: 9999;
+    border-radius: 100px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.nav-links {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+/* Pill Components */
+.navbar-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.navbar-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.search-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    max-width: 400px;
+    margin: 0 24px;
+}
+
+.search-pill {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: 1px solid white;
+    border-radius: 100px;
+    padding: 8px 16px;
+    width: 100%;
+    color: white;
+}
+
+.search-input {
+    background: transparent;
+    border: none;
+    color: white;
+    font-family: var(--font-family-sans);
+    font-size: 0.9rem;
+    width: 100%;
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+}

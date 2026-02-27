@@ -1,0 +1,127 @@
+.footer-section {
+    background-color: var(--bg-dark);
+    /* The dark olive green from theme */
+    color: white;
+    padding: 60px 0;
+    margin-top: 60px;
+    display: flex;
+    justify-content: center;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 40px;
+}
+
+/* Left Side: Newsletter & Logo */
+.footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.newsletter-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.newsletter-label {
+    font-family: var(--font-family-sans);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.newsletter-input-container {
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 100px;
+    padding: 6px 16px;
+    width: 300px;
+    position: relative;
+    transition: border-color 0.3s ease;
+}
+
+.newsletter-input-container:focus-within {
+    border-color: white;
+}
+
+.newsletter-input {
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    font-family: var(--font-family-sans);
+    font-size: 0.85rem;
+    width: 100%;
+}
+
+.newsletter-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.newsletter-submit {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    right: -10px;
+    top: -15px;
+    /* Adjusting to match mockup where paper airplane drifts top-right */
+    transform: rotate(-15deg);
+    transition: transform 0.3s ease;
+}
+
+.newsletter-submit:hover {
+    transform: scale(1.1) rotate(0deg);
+}
+
+.footer-logo h2 {
+    font-family: var(--font-family-serif);
+    font-size: 4.5rem;
+    font-weight: 400;
+    /* Matching the elegant thin look */
+    margin: 0;
+    line-height: 1;
+}
+
+/* Right Side: Links */
+.footer-right {
+    display: flex;
+    align-items: center;
+}
+
+.footer-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.footer-nav a {
+    color: white;
+    text-decoration: none;
+    font-family: var(--font-family-sans);
+    font-size: 0.9rem;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.footer-nav a:hover {
+    opacity: 1;
+}
+
+/* Responsive constraints */
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 60px;
+    }
+}

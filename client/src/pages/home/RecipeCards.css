@@ -1,0 +1,178 @@
+.recipes-section {
+    padding: 60px 0;
+    background-color: var(--bg-primary);
+}
+
+/* Header */
+.recipes-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.recipes-title {
+    font-size: 2.5rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.text-accent {
+    color: var(--accent-secondary);
+    /* The red/pink 'raffiné' */
+    font-style: italic;
+    font-weight: 500;
+}
+
+.recipes-subtitle {
+    font-family: var(--font-family-sans);
+    color: rgba(25, 47, 1, 0.6);
+    /* Slightly faded onPrimary color */
+    font-size: 1.1rem;
+    margin-top: 0;
+}
+
+/* Filters Bar */
+.filters-bar {
+    background-color: #E2E2E2;
+    /* Light gray bar from mockup */
+    padding: 16px 0;
+    margin-bottom: 40px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: center;
+}
+
+.filters-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid rgba(25, 47, 1, 0.4);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-family: var(--font-family-sans);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-pill:hover {
+    background: rgba(25, 47, 1, 0.05);
+    border-color: var(--text-primary);
+}
+
+/* Grid Layout */
+.recipes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Individual Recipe Card */
+.recipe-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.recipe-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.recipe-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    /* Makes the images square like the mockup */
+    overflow: hidden;
+}
+
+.recipe-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.recipe-card:hover .recipe-image {
+    transform: scale(1.05);
+}
+
+/* Favorite Button overlay */
+.favorite-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+    z-index: 2;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.favorite-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Card Content / Metadata */
+.recipe-content {
+    padding: 20px;
+}
+
+.recipe-card-title {
+    font-family: var(--font-family-serif);
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin-top: 0;
+    margin-bottom: 12px;
+    line-height: 1.3;
+}
+
+.recipe-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-family-sans);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.recipe-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stars {
+    display: flex;
+    gap: 2px;
+}
+
+.reviews-count {
+    opacity: 0.8;
+}
+
+.recipe-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
