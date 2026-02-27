@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react';
 export interface RecipeDTO {
     id: number;
     title: string;
-    title_fr: string | null;
     description: string | null;
-    description_fr: string | null;
+    locale: string;
     prepTime: number;
     prepTimeUnit: 'MINUTES' | 'HOURS';
     cookTime: number;

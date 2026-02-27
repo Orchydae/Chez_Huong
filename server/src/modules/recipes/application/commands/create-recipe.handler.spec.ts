@@ -56,29 +56,28 @@ describe('CreateRecipeHandler', () => {
 
     // Helper to create valid ingredient sections
     const createValidIngredientSections = () => [
-        new IngredientSection('Broth', 'Bouillon', [
+        new IngredientSection('Broth', [
             new RecipeIngredient(1, '2', 'kg'),
             new RecipeIngredient(2, '1', 'piece'),
         ]),
-        new IngredientSection('Noodles', 'Nouilles', [
+        new IngredientSection('Noodles', [
             new RecipeIngredient(3, '500', 'g'),
         ]),
     ];
 
     // Helper to create valid step sections
     const createValidStepSections = () => [
-        new StepSection('Preparation', 'Préparation', [
-            new Step(1, 'Prepare beef bones', 'Préparer les os de boeuf'),
-            new Step(2, 'Simmer broth', 'Mijoter le bouillon'),
+        new StepSection('Preparation', [
+            new Step(1, 'Prepare beef bones'),
+            new Step(2, 'Simmer broth'),
         ]),
     ];
 
     const createValidCommand = (): CreateRecipeCommand => {
         return new CreateRecipeCommand(
             'Pho Bo',
-            'Soupe Pho au Boeuf',
             'Traditional Vietnamese beef noodle soup',
-            'Soupe traditionnelle vietnamienne',
+            'vi',
             30,
             TimeUnit.MINUTES,
             120,
@@ -122,14 +121,14 @@ describe('CreateRecipeHandler', () => {
 
         it('should extract all ingredient IDs from all sections', async () => {
             const ingredientSections = [
-                new IngredientSection('Section 1', null, [
+                new IngredientSection('Section 1', [
                     new RecipeIngredient(10, '1', 'cup'),
                     new RecipeIngredient(20, '2', 'tbsp'),
                 ]),
-                new IngredientSection('Section 2', null, [
+                new IngredientSection('Section 2', [
                     new RecipeIngredient(30, '3', 'pieces'),
                 ]),
-                new IngredientSection('Section 3', null, [
+                new IngredientSection('Section 3', [
                     new RecipeIngredient(40, '100', 'g'),
                     new RecipeIngredient(50, '50', 'ml'),
                 ]),
@@ -137,9 +136,8 @@ describe('CreateRecipeHandler', () => {
 
             const command = new CreateRecipeCommand(
                 'Multi-section Recipe',
-                undefined,
                 null,
-                undefined,
+                'en',
                 10,
                 TimeUnit.MINUTES,
                 20,
@@ -164,9 +162,8 @@ describe('CreateRecipeHandler', () => {
         it('should throw BadRequestException for empty ingredient sections', async () => {
             const command = new CreateRecipeCommand(
                 'Empty Recipe',
-                undefined,
                 null,
-                undefined,
+                'en',
                 10,
                 TimeUnit.MINUTES,
                 20,
@@ -191,9 +188,8 @@ describe('CreateRecipeHandler', () => {
         it('should throw BadRequestException for empty step sections array', async () => {
             const command = new CreateRecipeCommand(
                 'Recipe with empty steps',
-                undefined,
                 null,
-                undefined,
+                'en',
                 10,
                 TimeUnit.MINUTES,
                 20,
@@ -218,9 +214,8 @@ describe('CreateRecipeHandler', () => {
         it('should handle command without optional nutritional info and particularities', async () => {
             const command = new CreateRecipeCommand(
                 'Minimal Recipe',
-                undefined,
                 null,
-                undefined,
+                'en',
                 10,
                 TimeUnit.MINUTES,
                 20,
@@ -240,7 +235,7 @@ describe('CreateRecipeHandler', () => {
 
             const result = await handler.execute(command);
 
-            expect(result.title_fr).toBeNull();
+            expect(result.locale).toBe('en');
             expect(result.stepSections).toHaveLength(1);
         });
     });

@@ -30,9 +30,8 @@ export {
 export class CreateRecipeCommand {
     constructor(
         public readonly title: string,
-        public readonly title_fr: string | undefined,
         public readonly description: string | null,
-        public readonly description_fr: string | undefined,
+        public readonly locale: string,
         public readonly prepTime: number,
         public readonly prepTimeUnit: TimeUnit,
         public readonly cookTime: number,

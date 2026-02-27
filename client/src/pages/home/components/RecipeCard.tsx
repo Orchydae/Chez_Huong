@@ -28,7 +28,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             <div className="recipe-image-container">
                 <img
                     src={recipe.imageUrl ?? FALLBACK_IMAGE}
-                    alt={recipe.title_fr ?? recipe.title}
+                    alt={recipe.title}
                     className="recipe-image"
                 />
                 <button className="favorite-btn">
@@ -37,7 +37,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             </div>
 
             <div className="recipe-content">
-                <h3 className="recipe-card-title">{recipe.title_fr ?? recipe.title}</h3>
+                <h3 className="recipe-card-title">{recipe.title}</h3>
 
                 <div className="recipe-meta">
                     <div className="recipe-rating">

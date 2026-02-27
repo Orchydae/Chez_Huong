@@ -14,14 +14,14 @@ describe('GetRecipesHandler', () => {
 
     // Helper to create valid ingredient sections
     const createValidIngredientSections = () => [
-        new IngredientSection('Main', null, [new RecipeIngredient(1, '100', 'g')]),
+        new IngredientSection('Main', [new RecipeIngredient(1, '100', 'g')]),
     ];
 
     // Sample test data
     const mockRecipes: Recipe[] = [
-        new Recipe(1, 'Pho Bo', 'Soupe Pho', 'Vietnamese soup', 'Soupe vietnamienne', 30, TimeUnit.MINUTES, 120, TimeUnit.MINUTES, 'MEDIUM', 'SOUP', 'VIETNAMESE', 4, 'author-1', createValidIngredientSections(), []),
-        new Recipe(2, 'Banh Mi', 'Sandwich Banh Mi', 'Vietnamese sandwich', 'Sandwich vietnamien', 15, TimeUnit.MINUTES, 0, TimeUnit.MINUTES, 'EASY', 'SANDWICH', 'VIETNAMESE', 2, 'author-2', createValidIngredientSections(), []),
-        new Recipe(3, 'Com Tam', 'Riz Brisé', 'Broken rice dish', 'Plat de riz brisé', 20, TimeUnit.MINUTES, 25, TimeUnit.MINUTES, 'EASY', 'MAIN', 'VIETNAMESE', 1, 'author-1', createValidIngredientSections(), []),
+        new Recipe(1, 'Pho Bo', 'Vietnamese soup', 'vi', 30, TimeUnit.MINUTES, 120, TimeUnit.MINUTES, 'MEDIUM', 'SOUP', 'VIETNAMESE', 4, 'author-1', createValidIngredientSections(), []),
+        new Recipe(2, 'Banh Mi', 'Vietnamese sandwich', 'vi', 15, TimeUnit.MINUTES, 0, TimeUnit.MINUTES, 'EASY', 'SANDWICH', 'VIETNAMESE', 2, 'author-2', createValidIngredientSections(), []),
+        new Recipe(3, 'Com Tam', 'Broken rice dish', 'vi', 20, TimeUnit.MINUTES, 25, TimeUnit.MINUTES, 'EASY', 'MAIN', 'VIETNAMESE', 1, 'author-1', createValidIngredientSections(), []),
     ];
 
     beforeEach(async () => {
@@ -87,7 +87,7 @@ describe('GetRecipesHandler', () => {
 
             expect(result[0].id).toBe(1);
             expect(result[0].title).toBe('Pho Bo');
-            expect(result[0].title_fr).toBe('Soupe Pho');
+            expect(result[0].locale).toBe('vi');
             expect(result[0].ingredientSections).toHaveLength(1);
         });
     });

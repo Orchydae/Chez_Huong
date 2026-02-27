@@ -2,7 +2,7 @@
     background-color: var(--bg-dark);
     /* The dark olive green from theme */
     color: white;
-    padding: 60px 0;
+    padding: 60px;
     margin-top: 60px;
     display: flex;
     justify-content: center;

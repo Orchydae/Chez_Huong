@@ -22,18 +22,18 @@ describe('RecipesController', () => {
 
     // Helper to create valid ingredient sections
     const createValidIngredientSections = () => [
-        new IngredientSection('Main', null, [new RecipeIngredient(1, '100', 'g')]),
+        new IngredientSection('Main', [new RecipeIngredient(1, '100', 'g')]),
     ];
 
     // Helper to create valid step sections
     const createValidStepSections = () => [
-        new StepSection('Prep', null, [new Step(1, 'Wash', null)]),
+        new StepSection('Prep', [new Step(1, 'Wash')]),
     ];
 
     // Sample test data
     const mockRecipes: Recipe[] = [
-        new Recipe(1, 'Pho Bo', 'Soupe Pho', 'Vietnamese soup', 'Soupe vietnamienne', 30, TimeUnit.MINUTES, 120, TimeUnit.MINUTES, 'MEDIUM', 'SOUP', 'VIETNAMESE', 4, 'author-1', createValidIngredientSections(), createValidStepSections()),
-        new Recipe(2, 'Banh Mi', 'Sandwich Banh Mi', 'Vietnamese sandwich', 'Sandwich vietnamien', 15, TimeUnit.MINUTES, 0, TimeUnit.MINUTES, 'EASY', 'SANDWICH', 'VIETNAMESE', 2, 'author-2', createValidIngredientSections(), createValidStepSections()),
+        new Recipe(1, 'Pho Bo', 'Vietnamese soup', 'vi', 30, TimeUnit.MINUTES, 120, TimeUnit.MINUTES, 'MEDIUM', 'SOUP', 'VIETNAMESE', 4, 'author-1', createValidIngredientSections(), createValidStepSections()),
+        new Recipe(2, 'Banh Mi', 'Vietnamese sandwich', 'vi', 15, TimeUnit.MINUTES, 0, TimeUnit.MINUTES, 'EASY', 'SANDWICH', 'VIETNAMESE', 2, 'author-2', createValidIngredientSections(), createValidStepSections()),
     ];
 
     beforeEach(async () => {
@@ -73,9 +73,8 @@ describe('RecipesController', () => {
         it('should map DTO to command and call service', async () => {
             const dto: CreateRecipeDto = {
                 title: 'New Recipe',
-                title_fr: 'Nouvelle Recette',
                 description: 'A delicious recipe',
-                description_fr: 'Une recette délicieuse',
+                locale: 'fr',
                 prepTime: 20,
                 prepTimeUnit: TimeUnit.MINUTES,
                 cookTime: 30,
@@ -88,7 +87,6 @@ describe('RecipesController', () => {
                 ingredientSections: [
                     {
                         name: 'Main Ingredients',
-                        name_fr: 'Ingrédients Principaux',
                         ingredients: [
                             { ingredientId: 1, quantity: '100', unit: 'g' },
                             { ingredientId: 2, quantity: '2', unit: 'tbsp' },
@@ -98,9 +96,8 @@ describe('RecipesController', () => {
                 stepSections: [
                     {
                         title: 'Preparation',
-                        title_fr: 'Préparation',
                         steps: [
-                            { order: 1, description: 'Mix ingredients', description_fr: 'Mélanger les ingrédients' } as CreateStepDto,
+                            { order: 1, description: 'Mix ingredients' } as CreateStepDto,
                         ],
                     } as CreateStepSectionDto,
                 ],
@@ -125,6 +122,7 @@ describe('RecipesController', () => {
             const dto: CreateRecipeDto = {
                 title: 'Simple Recipe',
                 description: null,
+                locale: 'en',
                 prepTime: 10,
                 cookTime: 20,
                 difficulty: 'EASY',
@@ -159,6 +157,7 @@ describe('RecipesController', () => {
             const dto: CreateRecipeDto = {
                 title: 'Healthy Recipe',
                 description: 'A healthy dish',
+                locale: 'en',
                 prepTime: 15,
                 cookTime: 25,
                 difficulty: 'MEDIUM',

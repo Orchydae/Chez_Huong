@@ -33,19 +33,19 @@ export class RecipeMapper {
             // Create section - ingredients already validated when originally created
             return Object.assign(
                 Object.create(IngredientSection.prototype),
-                { name: section.name, name_fr: section.name_fr, ingredients }
+                { name: section.name, ingredients }
             ) as IngredientSection;
         }) || [];
 
         // Map step sections
         const stepSections: StepSection[] = raw.stepSections?.map(section => {
             const steps = section.steps.map(step =>
-                new Step(step.order, step.description, step.description_fr, step.mediaUrl || undefined)
+                new Step(step.order, step.description, step.mediaUrl || undefined)
             );
             // Create section - steps already validated when originally created
             return Object.assign(
                 Object.create(StepSection.prototype),
-                { title: section.title, title_fr: section.title_fr, steps }
+                { title: section.title, steps }
             ) as StepSection;
         }) || [];
 
@@ -56,9 +56,8 @@ export class RecipeMapper {
         return new Recipe(
             raw.id,
             raw.title,
-            raw.title_fr,
             raw.description,
-            raw.description_fr,
+            raw.locale,
             raw.prepTime,
             raw.prepTimeUnit as any,
             raw.cookTime,

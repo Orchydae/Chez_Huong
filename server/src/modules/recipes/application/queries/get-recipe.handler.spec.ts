@@ -15,16 +15,15 @@ describe('GetRecipeHandler', () => {
 
     // Helper to create valid ingredient sections
     const createValidIngredientSections = () => [
-        new IngredientSection('Main', null, [new RecipeIngredient(1, '100', 'g')]),
+        new IngredientSection('Main', [new RecipeIngredient(1, '100', 'g')]),
     ];
 
     // Sample test data
     const mockRecipe = new Recipe(
         1,
         'Pho Bo',
-        'Soupe Pho au Boeuf',
         'Traditional Vietnamese beef noodle soup',
-        'Soupe traditionnelle vietnamienne au boeuf',
+        'vi',
         30,
         TimeUnit.MINUTES,
         120,
@@ -117,9 +116,8 @@ describe('GetRecipeHandler', () => {
             const recipeWithoutNutrition = new Recipe(
                 2,
                 'Simple Recipe',
-                null,
                 'A simple recipe',
-                null,
+                'en',
                 10,
                 TimeUnit.MINUTES,
                 20,

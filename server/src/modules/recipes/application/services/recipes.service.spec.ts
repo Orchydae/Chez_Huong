@@ -19,13 +19,13 @@ describe('RecipesService', () => {
 
     // Helper to create valid ingredient sections
     const createValidIngredientSections = () => [
-        new IngredientSection('Main', null, [new RecipeIngredient(1, '100', 'g')]),
+        new IngredientSection('Main', [new RecipeIngredient(1, '100', 'g')]),
     ];
 
     // Sample test data
     const mockRecipes: Recipe[] = [
-        new Recipe(1, 'Pho Bo', 'Soupe Pho', 'Vietnamese soup', 'Soupe vietnamienne', 30, TimeUnit.MINUTES, 120, TimeUnit.HOURS, 'MEDIUM', 'SOUP', 'VIETNAMESE', 4, 'author-1', createValidIngredientSections()),
-        new Recipe(2, 'Banh Mi', 'Sandwich Banh Mi', 'Vietnamese sandwich', 'Sandwich vietnamien', 15, TimeUnit.MINUTES, 0, TimeUnit.MINUTES, 'EASY', 'SANDWICH', 'VIETNAMESE', 2, 'author-2', createValidIngredientSections()),
+        new Recipe(1, 'Pho Bo', 'Vietnamese soup', 'vi', 30, TimeUnit.MINUTES, 120, TimeUnit.HOURS, 'MEDIUM', 'SOUP', 'VIETNAMESE', 4, 'author-1', createValidIngredientSections(), []),
+        new Recipe(2, 'Banh Mi', 'Vietnamese sandwich', 'vi', 15, TimeUnit.MINUTES, 0, TimeUnit.MINUTES, 'EASY', 'SANDWICH', 'VIETNAMESE', 2, 'author-2', createValidIngredientSections(), []),
     ];
 
     beforeEach(async () => {
@@ -71,9 +71,8 @@ describe('RecipesService', () => {
         it('should delegate to CreateRecipeHandler.execute()', async () => {
             const command = new CreateRecipeCommand(
                 'New Recipe',
-                'Nouvelle Recette',
                 'Description',
-                'Description FR',
+                'fr',
                 20,
                 TimeUnit.MINUTES,
                 30,
@@ -84,6 +83,7 @@ describe('RecipesService', () => {
                 4,
                 'author-123',
                 createValidIngredientSections(),
+                [],
             );
             const expectedRecipe = mockRecipes[0];
             mockCreateRecipeHandler.execute.mockResolvedValue(expectedRecipe);
@@ -98,9 +98,8 @@ describe('RecipesService', () => {
         it('should propagate errors from handler', async () => {
             const command = new CreateRecipeCommand(
                 'New Recipe',
-                undefined,
                 null,
-                undefined,
+                'en',
                 20,
                 TimeUnit.MINUTES,
                 30,
@@ -111,6 +110,7 @@ describe('RecipesService', () => {
                 4,
                 'author-123',
                 createValidIngredientSections(),
+                [],
             );
             const error = new Error('Ingredient not found');
             mockCreateRecipeHandler.execute.mockRejectedValue(error);

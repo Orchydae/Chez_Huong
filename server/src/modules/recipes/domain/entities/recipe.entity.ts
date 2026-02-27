@@ -136,10 +136,8 @@ export class RecipeIngredient {
  */
 export class IngredientSection {
     constructor(
-        /** Section name in English */
+        /** Section name in the recipe's original language */
         public readonly name: string,
-        /** Section name in French (optional) */
-        public readonly name_fr: string | null,
         /** List of ingredients in this section (must have at least 1) */
         public readonly ingredients: RecipeIngredient[],
     ) {
@@ -164,10 +162,8 @@ export class Step {
     constructor(
         /** Step order within the section (1-indexed) */
         public readonly order: number,
-        /** Step description in English */
+        /** Step description in the recipe's original language */
         public readonly description: string,
-        /** Step description in French (optional) */
-        public readonly description_fr: string | null,
         /** URL to media (image/video) demonstrating this step (optional) */
         public readonly mediaUrl?: string,
     ) { }
@@ -188,10 +184,8 @@ export class Step {
  */
 export class StepSection {
     constructor(
-        /** Section title in English */
+        /** Section title in the recipe's original language */
         public readonly title: string,
-        /** Section title in French (optional) */
-        public readonly title_fr: string | null,
         /** List of steps in this section (must have at least 1) */
         public readonly steps: Step[],
     ) {
@@ -226,9 +220,8 @@ export class Recipe {
     constructor(
         public id: number,
         public title: string,
-        public title_fr: string | null,
         public description: string | null,
-        public description_fr: string | null,
+        public locale: string,
         public prepTime: number,
         public prepTimeUnit: TimeUnit,
         public cookTime: number,
@@ -267,9 +260,8 @@ export class Recipe {
      */
     static create(
         title: string,
-        title_fr: string | null,
         description: string | null,
-        description_fr: string | null,
+        locale: string,
         prepTime: number,
         prepTimeUnit: TimeUnit,
         cookTime: number,
@@ -300,9 +292,8 @@ export class Recipe {
         return new Recipe(
             0, // New recipe, ID will be assigned by persistence layer
             title,
-            title_fr,
             description,
-            description_fr,
+            locale,
             prepTime,
             prepTimeUnit,
             cookTime,

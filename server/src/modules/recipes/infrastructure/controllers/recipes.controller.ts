@@ -24,7 +24,6 @@ export class RecipesController {
         const ingredientSections = dto.ingredientSections.map(section =>
             new IngredientSection(
                 section.name,
-                section.name_fr || null,
                 section.ingredients.map(ing =>
                     new RecipeIngredient(
                         ing.ingredientId,
@@ -38,12 +37,10 @@ export class RecipesController {
         const stepSections = dto.stepSections.map(section =>
             new StepSection(
                 section.title,
-                section.title_fr || null,
                 section.steps.map(step =>
                     new Step(
                         step.order,
                         step.description,
-                        step.description_fr || null,
                         step.mediaUrl,
                     )
                 ),
@@ -52,9 +49,8 @@ export class RecipesController {
 
         const command = new CreateRecipeCommand(
             dto.title,
-            dto.title_fr,
             dto.description,
-            dto.description_fr,
+            dto.locale,
             dto.prepTime,
             dto.prepTimeUnit || TimeUnit.MINUTES,
             dto.cookTime,

@@ -40,9 +40,10 @@ model User {
   password  String
   role      Role
 
-  recipes   Recipe[]
-  likes     Like[]
-  comments  Comment[]
+  recipes      Recipe[]
+  likes        Like[]
+  comments     Comment[]
+  translations Translation[]
 }
 
 enum Difficulty {
@@ -68,10 +69,9 @@ enum TimeUnit {
 
 model Recipe {
   id          Int     @id @default(autoincrement())
-  title       String  // Default language (EN)
-  title_fr    String? // French translation
-  description String? // Default language (EN)
-  description_fr String? // French translation
+  title       String
+  description String?
+  locale      String  // original language code, e.g. "vi", "fr", "en"
   prepTime    Int // in minutes
   prepTimeUnit TimeUnit @default(MINUTES)
   cookTime    Int // in minutes
@@ -85,17 +85,17 @@ model Recipe {
   authorId    String
   author      User    @relation(fields: [authorId], references: [id])
 
-  particularities Particularity[]
-  stepSections    StepSection[]
+  particularities    Particularity[]
+  stepSections       StepSection[]
   ingredientSections IngredientSection[]
-  likes           Like[]
-  comments        Comment[]
+  likes              Like[]
+  comments           Comment[]
+  translations       Translation[]
 }
 
 model IngredientSection {
   id       Int                @id @default(autoincrement())
-  name     String  // Default language (EN)
-  name_fr  String? // French translation
+  name     String
   recipeId Int
   recipe   Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   ingredients RecipeIngredient[]
@@ -112,8 +112,7 @@ model Particularity {
 
 model StepSection {
   id       Int    @id @default(autoincrement())
-  title    String  // Default language (EN)
-  title_fr String? // French translation
+  title    String
   recipeId Int
   recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   steps    Step[]
@@ -122,8 +121,7 @@ model StepSection {
 model Step {
   id            Int         @id @default(autoincrement())
   order         Int
-  description   String  // Default language (EN)
-  description_fr String? // French translation
+  description   String
   mediaUrl      String?
   stepSectionId Int
   stepSection   StepSection @relation(fields: [stepSectionId], references: [id], onDelete: Cascade)
@@ -245,6 +243,27 @@ model Comment {
   replies   Comment[] @relation("CommentReplies")
 }
 
+
+enum TranslationStatus {
+  DRAFT
+  APPROVED
+}
+
+model Translation {
+  id           Int               @id @default(autoincrement())
+  recipeId     Int
+  recipe       Recipe            @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  field        String            // e.g. "title", "description", "stepSection.1.step.2.description"
+  locale       String            // target language code, e.g. "fr", "en"
+  value        String            // the translated text
+  translatorId String
+  translator   User              @relation(fields: [translatorId], references: [id])
+  status       TranslationStatus @default(DRAFT)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([recipeId, field, locale])
+}
 
 model AuditLog {
   id          Int      @id @default(autoincrement())

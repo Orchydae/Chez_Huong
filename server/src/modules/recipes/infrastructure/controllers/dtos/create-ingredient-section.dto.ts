@@ -7,10 +7,6 @@ export class CreateIngredientSectionDto {
     @IsNotEmpty()
     name!: string;
 
-    @IsString()
-    @IsOptional()
-    name_fr?: string;
-
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CreateRecipeIngredientDto)

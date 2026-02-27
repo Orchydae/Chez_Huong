@@ -45,9 +45,8 @@ export class PrismaRecipeRepository implements IRecipesRepository {
         // Build create data from the aggregate
         const data: any = {
             title: recipe.title,
-            title_fr: recipe.title_fr,
             description: recipe.description,
-            description_fr: recipe.description_fr,
+            locale: recipe.locale,
             prepTime: recipe.prepTime,
             prepTimeUnit: recipe.prepTimeUnit as any,
             cookTime: recipe.cookTime,
@@ -64,7 +63,6 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             data.ingredientSections = {
                 create: recipe.ingredientSections.map(section => ({
                     name: section.name,
-                    name_fr: section.name_fr,
                     ingredients: {
                         create: section.ingredients.map(recipeIng => ({
                             ingredientId: recipeIng.ingredientId,
@@ -90,12 +88,10 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             data.stepSections = {
                 create: recipe.stepSections.map(section => ({
                     title: section.title,
-                    title_fr: section.title_fr,
                     steps: {
                         create: section.steps.map(step => ({
                             order: step.order,
                             description: step.description,
-                            description_fr: step.description_fr,
                             mediaUrl: step.mediaUrl,
                         }))
                     }

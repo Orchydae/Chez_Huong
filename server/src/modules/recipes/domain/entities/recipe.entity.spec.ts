@@ -41,29 +41,28 @@ describe('Recipe Entity', () => {
                 new RecipeIngredient(1, '100', 'g'),
                 new RecipeIngredient(2, '2', 'tbsp'),
             ];
-            const section = new IngredientSection('Main Ingredients', 'Ingrédients Principaux', ingredients);
+            const section = new IngredientSection('Main Ingredients', ingredients);
 
             expect(section.name).toBe('Main Ingredients');
-            expect(section.name_fr).toBe('Ingrédients Principaux');
             expect(section.ingredients).toHaveLength(2);
         });
 
         it('should throw EmptyIngredientsError when ingredients array is empty', () => {
             expect(() => {
-                new IngredientSection('Empty Section', null, []);
+                new IngredientSection('Empty Section', []);
             }).toThrow(EmptyIngredientsError);
         });
 
         it('should throw EmptyIngredientsError with section name in message', () => {
             expect(() => {
-                new IngredientSection('My Section', null, []);
+                new IngredientSection('My Section', []);
             }).toThrow('Ingredient section "My Section" must have at least one ingredient');
         });
 
-        it('should accept null for French name', () => {
-            const section = new IngredientSection('Main', null, [new RecipeIngredient(1, '100', 'g')]);
+        it('should create section without French name', () => {
+            const section = new IngredientSection('Main', [new RecipeIngredient(1, '100', 'g')]);
 
-            expect(section.name_fr).toBeNull();
+            expect(section.name).toBe('Main');
         });
     });
 
@@ -72,22 +71,15 @@ describe('Recipe Entity', () => {
     // ========================================================================
     describe('Step', () => {
         it('should create a Step with all properties', () => {
-            const step = new Step(1, 'Preheat oven', 'Préchauffer le four', 'https://example.com/video.mp4');
+            const step = new Step(1, 'Preheat oven', 'https://example.com/video.mp4');
 
             expect(step.order).toBe(1);
             expect(step.description).toBe('Preheat oven');
-            expect(step.description_fr).toBe('Préchauffer le four');
             expect(step.mediaUrl).toBe('https://example.com/video.mp4');
         });
 
-        it('should allow null French description', () => {
-            const step = new Step(1, 'Mix ingredients', null);
-
-            expect(step.description_fr).toBeNull();
-        });
-
         it('should allow optional mediaUrl', () => {
-            const step = new Step(1, 'Mix ingredients', null);
+            const step = new Step(1, 'Mix ingredients');
 
             expect(step.mediaUrl).toBeUndefined();
         });
@@ -99,25 +91,24 @@ describe('Recipe Entity', () => {
     describe('StepSection', () => {
         it('should create a StepSection with steps', () => {
             const steps = [
-                new Step(1, 'Prep vegetables', 'Préparer les légumes'),
-                new Step(2, 'Cook meat', 'Cuire la viande'),
+                new Step(1, 'Prep vegetables'),
+                new Step(2, 'Cook meat'),
             ];
-            const section = new StepSection('Preparation', 'Préparation', steps);
+            const section = new StepSection('Preparation', steps);
 
             expect(section.title).toBe('Preparation');
-            expect(section.title_fr).toBe('Préparation');
             expect(section.steps).toHaveLength(2);
         });
 
         it('should throw EmptyStepsError when steps array is empty', () => {
             expect(() => {
-                new StepSection('Empty Section', null, []);
+                new StepSection('Empty Section', []);
             }).toThrow(EmptyStepsError);
         });
 
         it('should throw EmptyStepsError with section title in message', () => {
             expect(() => {
-                new StepSection('Cooking', null, []);
+                new StepSection('Cooking', []);
             }).toThrow('Step section "Cooking" must have at least one step');
         });
     });
@@ -127,19 +118,18 @@ describe('Recipe Entity', () => {
     // ========================================================================
     describe('Recipe constructor', () => {
         const validIngredientSections = [
-            new IngredientSection('Main', null, [new RecipeIngredient(1, '100', 'g')]),
+            new IngredientSection('Main', [new RecipeIngredient(1, '100', 'g')]),
         ];
         const validStepSections = [
-            new StepSection('Prep', null, [new Step(1, 'Wash', null)]),
+            new StepSection('Prep', [new Step(1, 'Wash')]),
         ];
 
         it('should create a Recipe instance with required parameters', () => {
             const recipe = new Recipe(
                 1,
                 'Pho Bo',
-                'Soupe Pho au Boeuf',
                 'Traditional Vietnamese beef noodle soup',
-                'Soupe traditionnelle vietnamienne au boeuf',
+                'vi',
                 30,
                 TimeUnit.MINUTES,
                 120,
@@ -156,17 +146,17 @@ describe('Recipe Entity', () => {
             expect(recipe).toBeInstanceOf(Recipe);
             expect(recipe.id).toBe(1);
             expect(recipe.title).toBe('Pho Bo');
+            expect(recipe.locale).toBe('vi');
             expect(recipe.ingredientSections).toHaveLength(1);
             expect(recipe.stepSections).toHaveLength(1);
         });
 
-        it('should allow null French translations', () => {
+        it('should allow null description', () => {
             const recipe = new Recipe(
                 1,
                 'Pho Bo',
                 null,
-                'Description',
-                null,
+                'vi',
                 30,
                 TimeUnit.MINUTES,
                 60,
@@ -180,8 +170,7 @@ describe('Recipe Entity', () => {
                 validStepSections,
             );
 
-            expect(recipe.title_fr).toBeNull();
-            expect(recipe.description_fr).toBeNull();
+            expect(recipe.description).toBeNull();
         });
     });
 
@@ -190,22 +179,21 @@ describe('Recipe Entity', () => {
     // ========================================================================
     describe('Recipe.create', () => {
         const createValidIngredientSections = () => [
-            new IngredientSection('Main', null, [
+            new IngredientSection('Main', [
                 new RecipeIngredient(1, '100', 'g'),
                 new RecipeIngredient(2, '2', 'tbsp'),
             ]),
         ];
 
         const createValidStepSections = () => [
-            new StepSection('Prep', null, [new Step(1, 'Wash', null)]),
+            new StepSection('Prep', [new Step(1, 'Wash')]),
         ];
 
         it('should create a Recipe with valid data', () => {
             const recipe = Recipe.create(
                 'Pho Bo',
-                'Soupe Pho',
                 'Vietnamese soup',
-                'Soupe vietnamienne',
+                'vi',
                 30,
                 TimeUnit.MINUTES,
                 120,
@@ -222,6 +210,7 @@ describe('Recipe Entity', () => {
             expect(recipe).toBeInstanceOf(Recipe);
             expect(recipe.id).toBe(0); // New recipe
             expect(recipe.title).toBe('Pho Bo');
+            expect(recipe.locale).toBe('vi');
             expect(recipe.ingredientSections).toHaveLength(1);
             expect(recipe.stepSections).toHaveLength(1);
         });
@@ -231,8 +220,7 @@ describe('Recipe Entity', () => {
                 Recipe.create(
                     'Recipe',
                     null,
-                    null,
-                    null,
+                    'en',
                     10,
                     TimeUnit.MINUTES,
                     20,
@@ -253,8 +241,7 @@ describe('Recipe Entity', () => {
                 Recipe.create(
                     'Recipe',
                     null,
-                    null,
-                    null,
+                    'en',
                     10,
                     TimeUnit.MINUTES,
                     20,
@@ -275,8 +262,7 @@ describe('Recipe Entity', () => {
                 Recipe.create(
                     'Recipe',
                     null,
-                    null,
-                    null,
+                    'en',
                     10,
                     TimeUnit.MINUTES,
                     20,
@@ -297,8 +283,7 @@ describe('Recipe Entity', () => {
                 Recipe.create(
                     'Recipe',
                     null,
-                    null,
-                    null,
+                    'en',
                     10,
                     TimeUnit.MINUTES,
                     20,
@@ -320,8 +305,7 @@ describe('Recipe Entity', () => {
             const recipe = Recipe.create(
                 'Recipe',
                 null,
-                null,
-                null,
+                'en',
                 10,
                 TimeUnit.MINUTES,
                 20,
@@ -341,15 +325,14 @@ describe('Recipe Entity', () => {
 
         it('should create Recipe with multiple stepSections', () => {
             const stepSections = [
-                new StepSection('Prep', null, [new Step(1, 'Wash vegetables', null)]),
-                new StepSection('Cook', null, [new Step(1, 'Boil water', null)]),
+                new StepSection('Prep', [new Step(1, 'Wash vegetables')]),
+                new StepSection('Cook', [new Step(1, 'Boil water')]),
             ];
 
             const recipe = Recipe.create(
                 'Recipe',
                 null,
-                null,
-                null,
+                'en',
                 10,
                 TimeUnit.MINUTES,
                 20,

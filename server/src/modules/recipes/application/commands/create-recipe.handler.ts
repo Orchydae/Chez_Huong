@@ -38,9 +38,8 @@ export class CreateRecipeHandler {
         try {
             const recipe = Recipe.create(
                 command.title,
-                command.title_fr || null,
                 command.description,
-                command.description_fr || null,
+                command.locale,
                 command.prepTime,
                 command.prepTimeUnit,
                 command.cookTime,

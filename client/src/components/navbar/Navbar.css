@@ -85,3 +85,79 @@
     color: rgba(255, 255, 255, 0.7);
     font-style: italic;
 }
+
+/* ─── Profile Dropdown ─────────────────────────────────── */
+
+.profile-wrapper {
+    position: relative;
+}
+
+.profile-dropdown {
+    position: absolute;
+    top: calc(100% + 16px);
+    right: 0;
+    /* Subtle frosted-glass feel matching page bg */
+    background: var(--bg-primary);
+    border: 1px solid rgba(25, 47, 1, 0.12);
+    border-radius: 18px;
+    padding: 6px;
+    min-width: 220px;
+    box-shadow:
+        0 4px 6px rgba(0, 0, 0, 0.04),
+        0 16px 40px rgba(0, 0, 0, 0.12);
+    z-index: 9998;
+    transform-origin: top right;
+    animation: dropdownOpen 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dropdownOpen {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ─── Dropdown row items ───────────────────────────────── */
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 14px;
+    border: none;
+    background: transparent;
+    border-radius: 12px;
+    font-family: var(--font-family-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+    background: rgba(25, 47, 1, 0.06);
+}
+
+.dropdown-item--danger {
+    color: var(--accent-secondary);
+}
+
+.dropdown-item--danger:hover {
+    background: rgba(224, 71, 91, 0.08);
+}
+
+/* ─── Separator ────────────────────────────────────────── */
+
+.dropdown-separator {
+    height: 1px;
+    background: rgba(25, 47, 1, 0.1);
+    margin: 4px 8px;
+}

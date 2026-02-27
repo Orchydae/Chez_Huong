@@ -12,10 +12,6 @@ export class CreateStepDto {
 
     @IsString()
     @IsOptional()
-    description_fr?: string;
-
-    @IsString()
-    @IsOptional()
     mediaUrl?: string;
 }
 
@@ -23,10 +19,6 @@ export class CreateStepSectionDto {
     @IsString()
     @IsNotEmpty()
     title!: string;
-
-    @IsString()
-    @IsOptional()
-    title_fr?: string;
 
     @IsArray()
     @ValidateNested({ each: true })
