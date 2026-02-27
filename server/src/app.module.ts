@@ -7,11 +7,13 @@ import { TranslationModule } from './modules/translation/translation.module';
 import { SocialInteractionModule } from './modules/social-interaction/social-interaction.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
+    SharedModule,
     AuthModule,
     UsersModule,
     RecipesModule,

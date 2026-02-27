@@ -44,5 +44,6 @@ export class CreateRecipeCommand {
         public readonly ingredientSections: IngredientSection[],
         public readonly stepSections: StepSection[],
         public readonly particularities?: ParticularityType[],
+        public readonly imageUrl?: string | null,
     ) { }
 }

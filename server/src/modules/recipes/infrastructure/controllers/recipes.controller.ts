@@ -1,6 +1,12 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, UseGuards, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RecipesService } from '../../application/services/recipes.service';
 import { NutritionalValueService } from '../../application/services/nutritional-value.service';
+import { SupabaseExternal } from '../../../../shared/external/supabase.external';
+import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../auth/guards/roles.guard';
+import { Roles } from '../../../auth/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import { CreateRecipeDto } from './dtos/create-recipe.dto';
 import { CreateRecipeCommand } from '../../application/commands/create-recipe.command';
 import {
@@ -16,6 +22,7 @@ export class RecipesController {
     constructor(
         private readonly recipesService: RecipesService,
         private readonly nutritionalValueService: NutritionalValueService,
+        private readonly supabaseExternal: SupabaseExternal,
     ) { }
 
     @Post()
@@ -66,6 +73,32 @@ export class RecipesController {
         );
 
         return this.recipesService.create(command);
+    }
+
+    @Post('upload-image')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN, Role.WRITER)
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadImage(@UploadedFile() file: Express.Multer.File) {
+        if (!file) {
+            throw new BadRequestException('No file uploaded');
+        }
+
+        // Must be an image
+        if (!file.mimetype.startsWith('image/')) {
+            throw new BadRequestException('Uploaded file must be an image');
+        }
+
+        const ext = file.originalname.split('.').pop() ?? 'jpg';
+        const fileName = `${crypto.randomUUID()}.${ext}`;
+
+        const url = await this.supabaseExternal.uploadFile(
+            fileName,
+            file.buffer,
+            file.mimetype,
+        );
+
+        return { imageUrl: url };
     }
 
     @Get()

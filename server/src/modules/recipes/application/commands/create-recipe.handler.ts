@@ -52,6 +52,7 @@ export class CreateRecipeHandler {
                 command.ingredientSections,
                 command.stepSections,
                 command.particularities,
+                command.imageUrl,
             );
 
             // Save and return the recipe
