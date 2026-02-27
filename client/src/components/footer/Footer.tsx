@@ -17,7 +17,7 @@ export default function Footer() {
                                     className="newsletter-input"
                                 />
                                 <button className="newsletter-submit">
-                                    <Send size={18} strokeWidth={1.5} />
+                                    <Send size={30} strokeWidth={1} />
                                 </button>
                             </div>
                         </div>
