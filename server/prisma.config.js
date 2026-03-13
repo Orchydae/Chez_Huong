@@ -1,9 +1,14 @@
 // Prisma 7 configuration file
-// This file is used by the Prisma CLI for migrations
 require('dotenv').config();
+
+const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
+
+if (!url) {
+  console.error("❌ ERROR: DIRECT_URL or DATABASE_URL not found in environment.");
+}
 
 module.exports = {
   datasource: {
-    url: process.env.DIRECT_URL || process.env.DATABASE_URL,
+    url: url,
   },
 };
