@@ -41,4 +41,4 @@ COPY --from=builder /app/dist ./dist
 RUN npx prisma generate
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["npm", "run", "start:prod:deploy"]
