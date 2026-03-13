@@ -31,6 +31,86 @@
     z-index: 1;
 }
 
+.cr-step-content-row {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.cr-step-media-upload {
+    flex-shrink: 0;
+}
+
+.cr-step-upload-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px dashed rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: hidden;
+}
+
+.cr-step-upload-box:hover {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+.cr-step-upload-box.has-preview span {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 2px;
+    text-align: center;
+    font-size: 0.65rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.cr-step-upload-box.has-preview:hover span {
+    opacity: 1;
+}
+
+.cr-step-preview-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--accent-secondary);
+    border: none;
+    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cr-step-preview-remove:hover {
+    background: white;
+    transform: scale(1.1);
+}
+
 .cr-upload-btn {
     display: flex;
     flex-direction: column;
@@ -78,6 +158,11 @@
     font-size: 0.85rem;
     outline: none;
     cursor: pointer;
+}
+
+.cr-hero-type select option,
+.cr-locale-selector select option {
+    background: black;
 }
 
 .cr-hero-input {
@@ -322,14 +407,15 @@
     left: 0;
     right: 0;
     z-index: 20;
+    color: var(--text-primary);
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     margin-top: 4px;
-    padding: 4px 0;
+    padding: 8px 0;
     list-style: none;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    max-height: 200px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-height: 250px;
     overflow-y: auto;
 }
 
@@ -434,6 +520,7 @@
 }
 
 .cr-step-text {
+    flex: 1;
     font-size: 0.95rem;
     line-height: 1.6;
     background: rgba(255, 255, 255, 0.5);

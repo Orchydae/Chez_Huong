@@ -15,7 +15,13 @@ export default function Hero() {
                     {/* Column 1: Vertical Text */}
                     <div className="hero-col-1">
                         <button className="vertical-text-btn" title="Pas encore disponible">À propos</button>
-                        <button className="vertical-text-btn" title="Pas encore disponible">Recettes</button>
+                        <button
+                            className="vertical-text-btn"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' })}
+                        >
+                            Recettes
+                        </button>
                     </div>
 
                     {/* Column 2: Main Content */}

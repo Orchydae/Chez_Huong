@@ -7,7 +7,7 @@ export default function RecipeCards() {
     const { recipes, loading, error } = useRecipes();
 
     return (
-        <section className="recipes-section">
+        <section id="recipes" className="recipes-section">
             {/* Header Area */}
             <div className="recipes-header">
                 <h2 className="recipes-title">

@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Camera, Clock, Users, Globe, Plus, Trash2, CircleStop } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth.tsx';
-import './CreateRecipe.css';
+import '../create/CreateRecipe.css';
 
 /* ── Enums mirroring backend ────────────────────────────── */
 type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
@@ -69,8 +70,9 @@ const emptyStepSection = (): StepSectionForm => ({
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-/* ════════════════════════════════════════════════════════ */
-export default function CreateRecipe() {
+export default function ModifyRecipe() {
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const { auth } = useAuth();
 
     /* ── Scalar fields ─────────────────────────────────── */
@@ -90,7 +92,50 @@ export default function CreateRecipe() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    /* ── Fetch existing data ─────────────────────────── */
+    useEffect(() => {
+        async function fetchRecipe() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/recipes/${id}`);
+                if (!res.ok) throw new Error('Recipe not found');
+                const data = await res.json();
+                
+                setTitle(data.title || '');
+                setDescription(data.description || '');
+                setLocale(data.locale || 'vi');
+                setPrepTime(data.prepTime || 0);
+                setPrepTimeUnit(data.prepTimeUnit || 'MINUTES');
+                setCookTime(data.cookTime || 0);
+                setCookTimeUnit(data.cookTimeUnit || 'MINUTES');
+                setDifficulty(data.difficulty || 'EASY');
+                setRecipeType(data.type || 'MAIN');
+                setCuisine(data.cuisine || 'Viêt Nam');
+                setServings(data.servings || 4);
+                setImagePreviewUrl(data.imageUrl || null);
+                
+                if (data.ingredientSections?.length) {
+                    setIngredientSections(data.ingredientSections);
+                }
+                if (data.stepSections?.length) {
+                    setStepSections(data.stepSections.map((s: any) => ({
+                        ...s,
+                        steps: s.steps.map((st: any) => ({
+                            ...st,
+                            mediaPreviewUrl: st.mediaUrl || null
+                        }))
+                    })));
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchRecipe();
+    }, [id]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -102,9 +147,9 @@ export default function CreateRecipe() {
     /* Revoke the object URL on unmount or when a new file is selected */
     useEffect(() => {
         return () => {
-            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+            if (imagePreviewUrl && imageFile) URL.revokeObjectURL(imagePreviewUrl);
         };
-    }, [imagePreviewUrl]);
+    }, [imagePreviewUrl, imageFile]);
 
     /* ── Dynamic sections ──────────────────────────────── */
     const [ingredientSections, setIngredientSections] = useState<IngredientSectionForm[]>([
@@ -228,7 +273,7 @@ export default function CreateRecipe() {
 
         try {
             /* 1. Upload image to NestJS Backend (if one was picked) */
-            let imageUrl: string | null = null;
+            let imageUrl: string | null = imagePreviewUrl;
             if (imageFile) {
                 const formData = new FormData();
                 formData.append('file', imageFile);
@@ -286,7 +331,7 @@ export default function CreateRecipe() {
                 })
             );
 
-            /* 3. POST recipe to backend */
+            /* 3. PUT recipe to backend */
             const body = {
                 title,
                 description: description || null,
@@ -318,8 +363,8 @@ export default function CreateRecipe() {
                 })),
             };
 
-            const res = await fetch(`${API_BASE_URL}/recipes`, {
-                method: 'POST',
+            const res = await fetch(`${API_BASE_URL}/recipes/${id}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${auth.token}`,
@@ -328,17 +373,20 @@ export default function CreateRecipe() {
             });
 
             if (res.ok) {
-                alert('Recette créée avec succès !');
+                alert('Recette modifiée avec succès !');
+                navigate(`/recipes/${id}`);
             } else {
                 const err = await res.json().catch(() => ({}));
-                alert(err.message ?? 'Erreur lors de la création');
+                alert(err.message ?? 'Erreur lors de la modification');
             }
         } catch (err: any) {
-            alert(err.message ?? 'Erreur lors de la création');
+            alert(err.message ?? 'Erreur lors de la modification');
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    if (isLoading) return <div className="create-recipe-page container">Chargement...</div>;
 
     /* ═══════════════════════════════════════════════ JSX */
     return (
@@ -542,8 +590,7 @@ export default function CreateRecipe() {
                                         <input
                                             className="cr-ingredient-input cr-ing-qty"
                                             placeholder="Qté"
-                                            type="number"
-                                            min="0"
+                                            type="text"
                                             value={ing.quantity}
                                             onChange={e => updateIngredient(sIdx, iIdx, { quantity: e.target.value })}
                                         />
@@ -709,7 +756,7 @@ export default function CreateRecipe() {
                         onClick={handleSubmit}
                         disabled={isSubmitting}
                     >
-                        {isSubmitting ? 'Enregistrement...' : 'Sauvegarder la recette'}
+                        {isSubmitting ? 'Enregistrement...' : 'Sauvegarder les modifications'}
                     </button>
                 </div>
             </div>

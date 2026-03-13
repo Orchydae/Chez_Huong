@@ -112,12 +112,13 @@ export class EmptyStepsError extends Error {
  */
 export class RecipeIngredient {
     constructor(
-        /** Reference to the Ingredient entity */
         public readonly ingredientId: number,
         /** Quantity as a string to support fractions like "1/2" */
         public readonly quantity: string,
         /** Unit of measurement (e.g., "cups", "g", "tbsp") */
         public readonly unit: string,
+        /** Name of the ingredient (optional, primarily for display) */
+        public readonly ingredientName?: string,
     ) { }
 }
 

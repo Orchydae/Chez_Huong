@@ -46,21 +46,15 @@ export class IngredientsService {
      * @deprecated Consider using searchDatabase() and searchUsda() separately for more control
      */
     async searchIngredient(query: string): Promise<SearchIngredientResult> {
-        // First check if ingredient exists in our database
-        const existingIngredients = await this.searchDatabase(query);
-
-        if (existingIngredients.length > 0) {
-            return {
-                found: true,
-                ingredients: existingIngredients,
-            };
-        }
-
-        // Not in DB, search USDA
-        const usdaMatches = await this.searchUsda(query);
+        // Run both searches in parallel
+        const [existingIngredients, usdaMatches] = await Promise.all([
+            this.searchDatabase(query),
+            this.searchUsda(query),
+        ]);
 
         return {
-            found: false,
+            found: existingIngredients.length > 0 || usdaMatches.length > 0,
+            ingredients: existingIngredients,
             matches: usdaMatches,
         };
     }

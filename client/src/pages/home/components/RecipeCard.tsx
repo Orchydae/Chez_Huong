@@ -1,4 +1,5 @@
 import { Heart, Clock, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { RecipeDTO } from '../hooks/useRecipes';
 
 // Helper: format prepTime + cookTime into a display string
@@ -22,16 +23,23 @@ interface RecipeCardProps {
 
 export default function RecipeCard({ recipe }: RecipeCardProps) {
     const totalTime = formatTotalTime(recipe.prepTime, recipe.prepTimeUnit, recipe.cookTime, recipe.cookTimeUnit);
+    const navigate = useNavigate();
 
     return (
-        <div className="recipe-card">
+        <div className="recipe-card" onClick={() => navigate(`/recipes/${recipe.id}`)}>
             <div className="recipe-image-container">
                 <img
                     src={recipe.imageUrl ?? FALLBACK_IMAGE}
                     alt={recipe.title}
                     className="recipe-image"
                 />
-                <button className="favorite-btn">
+                <button 
+                    className="favorite-btn" 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        // favorite logic here if needed
+                    }}
+                >
                     <Heart size={24} fill="transparent" color="white" />
                 </button>
             </div>

@@ -25,11 +25,11 @@ export default function Navbar() {
     return (
         <>
             <nav className="navbar" style={{ position: 'absolute', top: 0, left: 0, width: '100%', background: 'transparent', borderRadius: '100px', padding: '50px' }}>
-                <div className="logo-placeholder" style={{ width: '150px' }}>
+                <Link to="/" className="logo-placeholder" style={{ width: '150px', textDecoration: 'none' }}>
                     <div className="logo logo-fixed" style={{ color: 'white' }}>
                         <img src="/chezhuonglogo.svg" alt="Chez Huong Logo" style={{ height: '60px' }} />
                     </div>
-                </div>
+                </Link>
 
                 <div className="search-container">
                     <div className="search-pill">

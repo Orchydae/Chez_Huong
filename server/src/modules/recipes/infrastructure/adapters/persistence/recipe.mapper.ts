@@ -27,8 +27,8 @@ export class RecipeMapper {
         // Map ingredient sections
         const ingredientSections: IngredientSection[] = raw.ingredientSections?.map(section => {
             // Use constructor directly to avoid re-validation when reconstituting
-            const ingredients = section.ingredients.map(ing =>
-                new RecipeIngredient(ing.ingredientId, ing.quantity, ing.unit)
+            const ingredients = section.ingredients.map((ing: any) =>
+                new RecipeIngredient(ing.ingredientId, ing.quantity, ing.unit, ing.ingredient?.name)
             );
             // Create section - ingredients already validated when originally created
             return Object.assign(

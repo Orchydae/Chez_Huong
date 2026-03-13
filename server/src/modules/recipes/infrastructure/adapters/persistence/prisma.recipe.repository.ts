@@ -13,7 +13,11 @@ export class PrismaRecipeRepository implements IRecipesRepository {
         const recipes = await this.prisma.recipe.findMany({
             include: {
                 ingredientSections: {
-                    include: { ingredients: true },
+                    include: { 
+                        ingredients: {
+                            include: { ingredient: true }
+                        } 
+                    },
                 },
                 stepSections: {
                     include: { steps: true },
@@ -29,7 +33,11 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             where: { id },
             include: {
                 ingredientSections: {
-                    include: { ingredients: true },
+                    include: { 
+                        ingredients: {
+                            include: { ingredient: true }
+                        } 
+                    },
                 },
                 stepSections: {
                     include: { steps: true },
@@ -41,8 +49,6 @@ export class PrismaRecipeRepository implements IRecipesRepository {
     }
 
     async save(recipe: Recipe): Promise<Recipe> {
-        // Recipe aggregate now contains all sections
-        // Build create data from the aggregate
         const data: any = {
             title: recipe.title,
             description: recipe.description,
@@ -55,63 +61,99 @@ export class PrismaRecipeRepository implements IRecipesRepository {
             type: recipe.type as any,
             cuisine: recipe.cuisine,
             servings: recipe.servings,
+            imageUrl: recipe.imageUrl,
             author: { connect: { id: recipe.authorId } },
         };
 
-        // Add ingredient sections from the aggregate
-        if (recipe.ingredientSections && recipe.ingredientSections.length > 0) {
-            data.ingredientSections = {
-                create: recipe.ingredientSections.map(section => ({
-                    name: section.name,
-                    ingredients: {
-                        create: section.ingredients.map(recipeIng => ({
-                            ingredientId: recipeIng.ingredientId,
-                            quantity: recipeIng.quantity,
-                            unit: recipeIng.unit,
-                        }))
-                    }
-                }))
-            };
-        }
+        const ingredientSections = recipe.ingredientSections && recipe.ingredientSections.length > 0 ? {
+            create: recipe.ingredientSections.map(section => ({
+                name: section.name,
+                ingredients: {
+                    create: section.ingredients.map(recipeIng => ({
+                        ingredientId: recipeIng.ingredientId,
+                        quantity: recipeIng.quantity,
+                        unit: recipeIng.unit,
+                    }))
+                }
+            }))
+        } : undefined;
 
-        // Add particularities if provided
-        if (recipe.particularities && recipe.particularities.length > 0) {
-            data.particularities = {
-                create: recipe.particularities.map(type => ({
-                    type: type,
-                }))
-            };
-        }
+        const particularities = recipe.particularities && recipe.particularities.length > 0 ? {
+            create: recipe.particularities.map(type => ({
+                type: type,
+            }))
+        } : undefined;
 
-        // Add stepSections from the aggregate if provided
-        if (recipe.stepSections && recipe.stepSections.length > 0) {
-            data.stepSections = {
-                create: recipe.stepSections.map(section => ({
-                    title: section.title,
-                    steps: {
-                        create: section.steps.map(step => ({
-                            order: step.order,
-                            description: step.description,
-                            mediaUrl: step.mediaUrl,
-                        }))
-                    }
-                }))
-            };
-        }
+        const stepSections = recipe.stepSections && recipe.stepSections.length > 0 ? {
+            create: recipe.stepSections.map(section => ({
+                title: section.title,
+                steps: {
+                    create: section.steps.map(step => ({
+                        order: step.order,
+                        description: step.description,
+                        mediaUrl: step.mediaUrl,
+                    }))
+                }
+            }))
+        } : undefined;
 
-        const saved = await this.prisma.recipe.create({
-            data,
-            include: {
-                ingredientSections: {
-                    include: { ingredients: true },
+        if (recipe.id > 0) {
+            // Update existing recipe
+            // We use a transaction to clear existing sections before recreating them
+            const saved = await this.prisma.$transaction(async (tx) => {
+                await tx.ingredientSection.deleteMany({ where: { recipeId: recipe.id } });
+                await tx.stepSection.deleteMany({ where: { recipeId: recipe.id } });
+                await tx.particularity.deleteMany({ where: { recipeId: recipe.id } });
+
+                return tx.recipe.update({
+                    where: { id: recipe.id },
+                    data: {
+                        ...data,
+                        ingredientSections,
+                        particularities,
+                        stepSections,
+                    },
+                    include: {
+                        ingredientSections: {
+                            include: { 
+                                ingredients: {
+                                    include: { ingredient: true }
+                                } 
+                            },
+                        },
+                        stepSections: {
+                            include: { steps: true },
+                        },
+                        particularities: true,
+                    },
+                });
+            });
+            return RecipeMapper.toDomain(saved);
+        } else {
+            // Create new recipe
+            const saved = await this.prisma.recipe.create({
+                data: {
+                    ...data,
+                    ingredientSections,
+                    particularities,
+                    stepSections,
                 },
-                stepSections: {
-                    include: { steps: true },
+                include: {
+                    ingredientSections: {
+                        include: { 
+                            ingredients: {
+                                include: { ingredient: true }
+                            } 
+                        },
+                    },
+                    stepSections: {
+                        include: { steps: true },
+                    },
+                    particularities: true,
                 },
-                particularities: true,
-            },
-        });
-        return RecipeMapper.toDomain(saved);
+            });
+            return RecipeMapper.toDomain(saved);
+        }
     }
 
     async getRecipeIngredientsWithNutrition(recipeId: number): Promise<RecipeIngredientWithNutrition[]> {

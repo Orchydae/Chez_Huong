@@ -8,6 +8,7 @@ import { IIngredientsRepository } from './domain/ports/ingredients.port';
 import { IngredientsController } from './infrastructure/controllers/ingredients.controller';
 import { PrismaRecipeRepository } from './infrastructure/adapters/persistence/prisma.recipe.repository';
 import { CreateRecipeHandler } from './application/commands/create-recipe.handler';
+import { UpdateRecipeHandler } from './application/commands/update-recipe.handler';
 import { GetRecipesHandler } from './application/queries/get-recipes.handler';
 import { GetRecipeHandler } from './application/queries/get-recipe.handler';
 import { RecipesService } from './application/services/recipes.service';
@@ -28,6 +29,7 @@ import { UsdaPort } from './domain/ports/usda.port';
         IngredientsService,
         NutritionalValueService,
         CreateRecipeHandler,
+        UpdateRecipeHandler,
         GetRecipesHandler,
         GetRecipeHandler,
         {

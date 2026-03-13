@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, UseGuards, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, UploadedFile, UseInterceptors, UseGuards, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RecipesService } from '../../application/services/recipes.service';
 import { NutritionalValueService } from '../../application/services/nutritional-value.service';
@@ -8,7 +8,9 @@ import { RolesGuard } from '../../../auth/guards/roles.guard';
 import { Roles } from '../../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { CreateRecipeDto } from './dtos/create-recipe.dto';
+import { UpdateRecipeDto } from './dtos/update-recipe.dto';
 import { CreateRecipeCommand } from '../../application/commands/create-recipe.command';
+import { UpdateRecipeCommand } from '../../application/commands/update-recipe.command';
 import {
     TimeUnit,
     RecipeIngredient,
@@ -27,6 +29,17 @@ export class RecipesController {
 
     @Post()
     create(@Body() dto: CreateRecipeDto) {
+        const command = this.mapDtoToCommand(dto);
+        return this.recipesService.create(command as CreateRecipeCommand);
+    }
+
+    @Put(':id')
+    update(@Param('id') id: string, @Body() dto: UpdateRecipeDto) {
+        const command = this.mapDtoToCommand(dto, +id);
+        return this.recipesService.update(command as UpdateRecipeCommand);
+    }
+
+    private mapDtoToCommand(dto: CreateRecipeDto | UpdateRecipeDto, id?: number): CreateRecipeCommand | UpdateRecipeCommand {
         // Map DTO → Domain types → Command (infrastructure → domain → application)
         const ingredientSections = dto.ingredientSections.map(section =>
             new IngredientSection(
@@ -54,7 +67,29 @@ export class RecipesController {
             )
         );
 
-        const command = new CreateRecipeCommand(
+        if (id !== undefined) {
+            return new UpdateRecipeCommand(
+                id,
+                dto.title,
+                dto.description,
+                dto.locale,
+                dto.prepTime,
+                dto.prepTimeUnit || TimeUnit.MINUTES,
+                dto.cookTime,
+                dto.cookTimeUnit || TimeUnit.MINUTES,
+                dto.difficulty,
+                dto.type,
+                dto.cuisine,
+                dto.servings,
+                dto.authorId,
+                ingredientSections,
+                stepSections,
+                dto.particularities,
+                dto.imageUrl,
+            );
+        }
+
+        return new CreateRecipeCommand(
             dto.title,
             dto.description,
             dto.locale,
@@ -70,9 +105,8 @@ export class RecipesController {
             ingredientSections,
             stepSections,
             dto.particularities,
+            dto.imageUrl,
         );
-
-        return this.recipesService.create(command);
     }
 
     @Post('upload-image')
