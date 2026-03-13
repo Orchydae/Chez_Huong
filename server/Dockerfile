@@ -33,6 +33,7 @@ RUN npm run build
 FROM base AS production
 COPY package*.json ./
 COPY prisma ./prisma/
+COPY prisma.config.js ./
 # Install only production dependencies
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
