@@ -1,0 +1,95 @@
+/* ReadRecipe.css */
+@import '../create/CreateRecipe.css';
+
+.read-recipe-page {
+    background-color: #f7f3ec;
+    min-height: 100vh;
+    padding-bottom: 100px;
+    font-family: var(--font-family-sans);
+}
+
+.cr-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.cr-description-text {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+}
+
+.cr-section-subtitle {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 4px;
+}
+
+.read-ingredient-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.read-ingredient-item {
+    display: flex;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.ing-qty {
+    font-weight: 700;
+    min-width: 40px;
+}
+
+.ing-unit {
+    color: rgba(0, 0, 0, 0.6);
+    min-width: 50px;
+}
+
+.ing-name {
+    flex: 1;
+}
+
+.cr-step-text-display {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.step-img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.edit-recipe-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+    width: fit-content;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.edit-recipe-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

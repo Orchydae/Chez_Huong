@@ -1,0 +1,216 @@
+/* Hero Section Background & Layout */
+.hero-section {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    /* Adjust based on navbar height */
+    margin-top: 0;
+    border-radius: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 40px;
+}
+
+.hero-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/bunbohue.jpg');
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.4) contrast(1.1);
+    /* Diminished exposure so text is visible */
+    z-index: 0;
+}
+
+.hero-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+/* Row 1 Layout */
+.hero-row-1 {
+    display: grid;
+    grid-template-columns: 40% 60%;
+    /* No gap needed if they mathematically fill 100% of the space perfectly */
+}
+
+/* Column 1: Vertical Text */
+.hero-col-1 {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding-left: 30px;
+    gap: 80px;
+}
+
+.vertical-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    color: var(--text-inverted);
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 2px;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+.vertical-text-btn {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    color: var(--text-inverted);
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 2px;
+    font-weight: 500;
+    opacity: 0.5;
+    background: transparent;
+    border: none;
+    cursor: not-allowed;
+    font-family: var(--font-family-sans);
+    padding: 0;
+    transition: opacity 0.3s ease;
+}
+
+.vertical-text-btn:hover {
+    opacity: 0.8;
+}
+
+/* Column 2: Main Content */
+.hero-col-2 {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.hero-title {
+    font-family: var(--font-family-serif);
+    font-size: 8rem;
+    color: var(--text-inverted);
+    line-height: 1;
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-weight: 600;
+    /* Often looks better slightly lighter in serif for massive titles */
+}
+
+.proverb-container {
+    position: relative;
+    margin-bottom: 24px;
+    cursor: default;
+    width: 100%;
+    line-height: 0.8;
+}
+
+.hero-proverb {
+    font-family: var(--font-family-serif);
+    font-size: 4rem;
+    color: var(--accent-primary);
+    font-style: italic;
+    margin: 0;
+}
+
+@keyframes blurReveal {
+    0% {
+        filter: blur(8px);
+        opacity: 0;
+    }
+
+    100% {
+        filter: blur(0px);
+        opacity: 1;
+    }
+}
+
+.blur-animate {
+    animation: blurReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hero-description {
+    font-family: var(--font-family-sans);
+    font-size: 1.25rem;
+    color: var(--text-inverted);
+    line-height: 1.6;
+    max-width: 800px;
+    margin-top: 0;
+    margin-bottom: 40px;
+    opacity: 0.9;
+}
+
+/* Common Layout */
+.container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Hero Button (S'abonner) */
+.hero-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 16px 32px;
+    border-radius: 100px;
+    font-family: var(--font-family-sans);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.hero-button:not(:disabled) {
+    cursor: pointer;
+}
+
+.hero-button:not(:disabled):hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hero-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Row 2 (Empty for now) */
+.hero-row-2 {
+    min-height: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .hero-title {
+        font-size: 5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-row-1 {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-col-1 {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 30px;
+        padding-bottom: 0;
+    }
+
+    .vertical-text {
+        writing-mode: horizontal-tb;
+        transform: none;
+    }
+
+    .hero-title {
+        font-size: 4rem;
+    }
+}

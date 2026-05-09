@@ -1,0 +1,51 @@
+@startuml bounded_context
+title Chez Huong — Bounded Context (DDD)
+
+skinparam componentStyle rectangle
+skinparam defaultFontName Monospace
+
+package "Authentication" as AuthContext {
+    rectangle AuthService
+    rectangle Strategies
+}
+
+package "Users" as UsersContext {
+    rectangle User
+    rectangle UsersService
+}
+
+package "Gestion des recettes" as RecipesContext {
+    rectangle Recipe
+    rectangle Ingredient
+    rectangle RecipesService
+    rectangle IngredientsService
+}
+
+package "Social & Interactions" as SI {
+    rectangle Like
+    rectangle Comment
+}
+
+package "Analyse nutritionnelle" as AN {
+    rectangle CalculNutritionnel
+}
+
+package "Observabilité & Surveillance" as OS {
+    rectangle Alert
+    rectangle AuditEvent
+}
+
+' === LIENS ENTRE BOUNDED CONTEXTS ===
+
+AuthContext --> UsersContext: Verifies Credentials
+RecipesContext --> UsersContext: Author Ref
+RecipesContext ..> AN: Uses (USDA/Nutrition)
+
+User -- RecipesContext: Create/Read
+User -- AuthContext: Login/Register
+
+SI --> RecipesContext: Concerne
+RecipesContext <-- AN: Analyse
+UsersContext <-- OS: Logs
+
+@enduml

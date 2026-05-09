@@ -1,0 +1,209 @@
+@startuml class_diagram
+title Chez Huong — Class Diagram
+
+skinparam componentStyle rectangle
+skinparam defaultFontName Monospace
+
+' ===========================================================================
+' AUTH MODULE
+' ===========================================================================
+
+class Utilisateur {
+    +nom: string
+    +prenom: string
+    +email: string
+    +motDePasse: string
+    +role: Role
+}
+
+' ===========================================================================
+' RECIPE MODULE — DOMAIN ENTITIES & VALUE OBJECTS
+' ===========================================================================
+
+class Recette <<Aggregate Root>> {
+    +id: number
+    +title: string
+    +title_fr: string
+    +description: string
+    +description_fr: string
+    +prepTime: number
+    +prepTimeUnit: TimeUnit
+    +cookTime: number
+    +cookTimeUnit: TimeUnit
+    +difficulty: string
+    +type: string
+    +cuisine: string
+    +servings: number
+    +authorId: string
+    +particularities: ParticularityType[]
+    {static} +create(…): Recipe
+}
+
+enum ParticularityType {
+    VEGETARIAN
+    VEGAN
+    GLUTEN_FREE
+    DAIRY_FREE
+    NUT_FREE
+    EGG_FREE
+    SEAFOOD_FREE
+    SOY_FREE
+    HALAL
+    KOSHER
+    LOW_SODIUM
+    LOW_SUGAR
+    LOW_CARB
+    HIGH_PROTEIN
+}
+
+enum TimeUnit {
+    MINUTES
+    HOURS
+}
+
+class IngredientSection <<Value Object>> {
+    +name: string
+    +name_fr: string
+}
+
+class RecipeIngredient <<Value Object>> {
+    +ingredientId: number
+    +quantity: string
+    +unit: string
+}
+
+class StepSection <<Value Object>> {
+    +title: string
+    +title_fr: string
+}
+
+class Step <<Value Object>> {
+    +order: number
+    +description: string
+    +description_fr: string
+    +mediaUrl: string
+}
+
+' ===========================================================================
+' RECIPE MODULE — INGREDIENT ENTITIES
+' ===========================================================================
+
+class Ingredient {
+    +id: number
+    +name: string
+    +fdcId: number
+}
+
+class IngredientNutrition {
+    +id: number
+    +ingredientId: number
+    +servingSize: number
+}
+
+class IngredientPortion {
+    +id: number
+    +ingredientId: number
+    +portionName: string
+    +gramWeight: number
+}
+
+' ===========================================================================
+' SHARED — NUTRIENT VALUES
+' ===========================================================================
+
+interface NutrientValues <<Shared>> {
+    +calories: number
+    +protein: number
+    +carbohydrates: number
+    +fiber / sugar: number
+    +totalFat / saturatedFat / …: number
+    +sodium / potassium / …: number
+    +vitaminA / vitaminC / …: number
+    __(25 nutrient fields)__
+}
+
+' ===========================================================================
+' RECIPE MODULE — USDA EXTERNAL DATA TYPES
+' ===========================================================================
+
+class UsdaFoodMatch <<External>> {
+    +fdcId: number
+    +name: string
+    +description: string
+    +dataType: string
+}
+
+class UsdaNutritionData <<External>> {
+    +calories: number
+    +protein: number
+    +carbohydrates: number
+    +totalFat: number
+    … (vitamins & minerals)
+}
+
+class UsdaPortionData <<External>> {
+    +portionName: string
+    +gramWeight: number
+}
+
+' ===========================================================================
+' SOCIAL FEATURES
+' ===========================================================================
+
+class Like {
+    +utilisateur: Utilisateur
+    +recette: Recette
+}
+
+class Comment {
+    +utilisateur: Utilisateur
+    +recette: Recette
+    +contenu: string
+    +date: Date
+}
+
+' ===========================================================================
+' RELATIONSHIPS — Recipe Structure
+' ===========================================================================
+
+Utilisateur "1" --> "*" Recette: Consulte/Écrit/Modifie
+
+Recette "1" --> "*" IngredientSection: contient
+IngredientSection "1" --> "*" RecipeIngredient: contient
+RecipeIngredient "*" --> "1" Ingredient: référence par ingredientId
+
+Recette "1" --> "*" StepSection: contient
+StepSection "1" --> "*" Step: contient
+
+Recette "*" --> "*" ParticularityType: possède
+
+' ===========================================================================
+' RELATIONSHIPS — Ingredient → Nutrition / Portions
+' ===========================================================================
+
+Ingredient "1" --> "0..1" IngredientNutrition: valeurs per 100 g
+IngredientNutrition --|> NutrientValues: extends
+Ingredient "1" --> "*" IngredientPortion: conversions unité→gramme
+
+UsdaNutritionData --|> NutrientValues: Partial
+
+' ===========================================================================
+' RELATIONSHIPS — USDA External Data
+' ===========================================================================
+
+Ingredient "0..1" ..> "0..1" UsdaFoodMatch: lié via fdcId
+UsdaFoodMatch ..> UsdaNutritionData: fournit données nutritionnelles
+UsdaFoodMatch ..> UsdaPortionData: fournit portions
+
+
+' ===========================================================================
+' RELATIONSHIPS — Social Features
+' ===========================================================================
+
+Recette "1" <-- "*" Like: Concerne
+Recette "1" <-- "*" Comment: Concerne
+Utilisateur "1" --> "*" Like: Like/Dislike
+Utilisateur "1" --> "*" Comment: Commente
+Comment "1" --> "*" Comment: Répond
+
+@enduml
