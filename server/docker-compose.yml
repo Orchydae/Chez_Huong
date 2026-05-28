@@ -40,24 +40,6 @@ services:
       - chez_huong_network
     command: sh -c "npx prisma generate && npm run start:dev"
 
-  # Prisma Studio
-  prisma-studio:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: development
-    container_name: chez_huong_prisma_studio
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-    ports:
-      - "5555:5555"
-    volumes:
-      - ./prisma:/app/prisma
-    networks:
-      - chez_huong_network
-    command: npx prisma studio --port 5555 --hostname 0.0.0.0
-
 networks:
   chez_huong_network:
     driver: bridge
