@@ -49,9 +49,14 @@ export class CreateRecipeDto {
     @IsNotEmpty()
     servings!: number;
 
+    /**
+     * @deprecated The author is always taken from the authenticated JWT.
+     * Kept on the DTO for backward compatibility with existing clients;
+     * any value sent here is ignored by the server.
+     */
     @IsString()
-    @IsNotEmpty()
-    authorId!: string;
+    @IsOptional()
+    authorId?: string;
 
     @IsString()
     @IsUrl()

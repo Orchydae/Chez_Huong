@@ -1,4 +1,5 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { UpdateRecipeCommand } from './update-recipe.command';
 import { IRecipesRepository } from '../../domain/ports/recipe.port';
 import {
@@ -24,6 +25,13 @@ export class UpdateRecipeHandler {
         const existingRecipe = await this.recipeRepository.findById(command.id);
         if (!existingRecipe) {
             throw new NotFoundException(`Recipe with ID ${command.id} not found`);
+        }
+
+        // Ownership check: only the author or an ADMIN may update a recipe.
+        const isAdmin = command.requesterRole === Role.ADMIN;
+        const isAuthor = command.requesterUserId === existingRecipe.authorId;
+        if (!isAdmin && !isAuthor) {
+            throw new ForbiddenException('You can only modify your own recipes');
         }
 
         // Validation: Extract all ingredient IDs from all sections
@@ -56,7 +64,8 @@ export class UpdateRecipeHandler {
                 command.type,
                 command.cuisine,
                 command.servings,
-                command.authorId,
+                // Preserve the original author — updates can never change ownership.
+                existingRecipe.authorId,
                 command.ingredientSections,
                 command.stepSections,
                 command.particularities,

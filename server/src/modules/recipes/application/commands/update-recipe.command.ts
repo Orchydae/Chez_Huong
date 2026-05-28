@@ -26,5 +26,8 @@ export class UpdateRecipeCommand {
         public readonly stepSections: StepSection[],
         public readonly particularities?: ParticularityType[],
         public readonly imageUrl?: string | null,
+        // Identity of the user attempting the update — used to enforce ownership.
+        public readonly requesterUserId?: string,
+        public readonly requesterRole?: string,
     ) { }
 }
