@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Languages, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,8 +36,14 @@ export default function TranslateRecipePanel({ recipe }: { recipe: Recipe }) {
   const targets = CONTENT_LANGUAGES.filter(l => l !== recipe.locale);
   const [target, setTarget] = useState<ContentLanguage>(targets[0] ?? 'en');
 
-  // switching language discards in-progress drafts (they belonged to the old one)
-  useEffect(() => setDrafts({}), [target]);
+  // switching language discards in-progress drafts (they belonged to the old
+  // one). Reset during render when the target changes — React's documented
+  // pattern, and it avoids the extra render an effect would cause.
+  const [prevTarget, setPrevTarget] = useState(target);
+  if (prevTarget !== target) {
+    setPrevTarget(target);
+    setDrafts({});
+  }
 
   const fields = useMemo(() => recipeTranslatableFields(recipe), [recipe]);
 
