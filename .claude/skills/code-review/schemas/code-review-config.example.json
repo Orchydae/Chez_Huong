@@ -1,0 +1,53 @@
+{
+  "confidence_threshold": 60,
+  
+  "severity_override": {
+    "yagni": "suggestion",
+    "naming": "ignore",
+    "performance": "important",
+    "function_length": "ignore"
+  },
+  
+  "disabled_checks": [
+    "comment_suggestions"
+  ],
+  
+  "custom_patterns": {
+    "prefer_lodash_tree_shaking": {
+      "pattern": "import.*from ['\"]lodash['\"]",
+      "message": "Use tree-shakeable lodash imports: import debounce from 'lodash/debounce'",
+      "severity": "suggestion"
+    },
+    "no_console_log": {
+      "pattern": "console\\.log\\(",
+      "message": "Use proper logging framework instead of console.log",
+      "severity": "important"
+    }
+  },
+  
+  "max_issues_per_file": 20,
+  
+  "excluded_paths": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/migrations/**",
+    "**/generated/**"
+  ],
+
+  "specialists": {
+    "enabled": ["security-reviewer", "correctness-reviewer", "quality-reviewer", "testing-reviewer", "performance-reviewer", "api-reviewer"],
+    "disabled": []
+  },
+
+  "extensions": {
+    "auto_detect": true,
+    "enabled": ["react", "nextjs"],
+    "disabled": []
+  },
+
+  "ticket": {
+    "enabled": true,
+    "prompt_when_missing": true,
+    "jira_project_key": "PROJ"
+  }
+}

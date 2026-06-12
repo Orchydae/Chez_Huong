@@ -1,0 +1,137 @@
+@startuml package_diagram
+title Chez Huong — Package Diagram (flat NestJS: Controller -> Service -> Prisma)
+
+skinparam componentStyle rectangle
+skinparam defaultFontName Monospace
+
+' ===========================================================================
+' PLATFORM / SHARED INFRASTRUCTURE
+' ===========================================================================
+
+package "AppModule (root)" as App {
+    [ConfigModule\n(env validation)]
+    [ThrottlerGuard\n(APP_GUARD, 60 req/min/IP)]
+    note bottom
+      main.ts: global ValidationPipe
+      (whitelist + forbidNonWhitelisted + transform),
+      CORS from CLIENT_URL, global prefix "/v1"
+    end note
+}
+
+package "PrismaModule" as Prisma {
+    [PrismaService]
+}
+
+package "SharedModule <<Global>>" as Shared {
+    [SupabaseService]
+}
+
+package "HealthModule" as Health {
+    [HealthController]
+    note bottom: GET /health (Terminus, skips throttle)
+}
+
+' ===========================================================================
+' AUTH MODULE
+' ===========================================================================
+
+package "Auth Module" as Auth {
+    [AuthController]
+    [AuthService]
+
+    package "guards" as AuthGuards {
+        [LocalAuthGuard]
+        [JwtAuthGuard]
+        [RolesGuard]
+    }
+    package "strategies" as AuthStrategies {
+        [LocalStrategy]
+        [JwtStrategy]
+    }
+    package "decorators" as AuthDecorators {
+        [Roles]
+    }
+
+    AuthController --> AuthService : uses
+    AuthController ..> AuthGuards : @UseGuards
+    AuthGuards --> AuthStrategies : extends
+    AuthDecorators ..> RolesGuard : sets @Roles metadata
+}
+
+' ===========================================================================
+' USERS MODULE
+' ===========================================================================
+
+package "Users Module" as Users {
+    [UsersController]
+    [UsersService]
+
+    UsersController --> UsersService : uses
+}
+
+' ===========================================================================
+' RECIPES MODULE  (recipes + ingredients + nutrition)
+' ===========================================================================
+
+package "Recipes Module" as Recipes {
+    [RecipesController]
+    [IngredientsController]
+    [RecipesService]
+    [IngredientsService]
+    [NutritionalValueService]
+    [UsdaService]
+
+    RecipesController --> RecipesService : uses
+    RecipesController --> NutritionalValueService : on-demand totals
+    IngredientsController --> IngredientsService : uses
+    IngredientsService --> UsdaService : USDA search / fetch
+}
+
+' ===========================================================================
+' TRANSLATION MODULE
+' ===========================================================================
+
+package "Translation Module" as Translation {
+    [TranslationController]
+    [TranslationsController]
+    [GoogleTranslateService]
+    [TranslationsService]
+
+    TranslationController --> GoogleTranslateService : machine proxy (POST /translate)
+    TranslationsController --> TranslationsService : stored CRUD (/translations)
+}
+
+' ===========================================================================
+' SOCIAL INTERACTION MODULE
+' ===========================================================================
+
+package "Social Interaction Module" as Social {
+    [SocialInteractionController]
+    [SocialInteractionService]
+
+    SocialInteractionController --> SocialInteractionService : uses
+}
+
+' ===========================================================================
+' CROSS-MODULE WIRING
+' ===========================================================================
+
+AuthService --> UsersService : validate / create user
+RecipesController ..> SupabaseService : upload image
+
+' services own data access via PrismaService directly (no repository ports)
+UsersService --> PrismaService
+RecipesService --> PrismaService
+IngredientsService --> PrismaService
+NutritionalValueService --> PrismaService
+TranslationsService --> PrismaService
+SocialInteractionService --> PrismaService
+HealthController --> PrismaService : liveness ping
+
+' auth guards are reused by protected controllers in other modules
+Recipes ..> AuthGuards : JwtAuthGuard + RolesGuard
+Translation ..> AuthGuards : JwtAuthGuard + RolesGuard
+Social ..> AuthGuards : JwtAuthGuard
+Users ..> AuthGuards : JwtAuthGuard + RolesGuard (admin)
+
+@enduml

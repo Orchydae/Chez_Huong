@@ -1,0 +1,60 @@
+@startuml deployment_diagram
+title Chez Huong — Deployment Diagram (Modular Monolith)
+
+skinparam defaultFontName Monospace
+skinparam cloud {
+    BackgroundColor<<planned>> #FFF8E1
+    BorderColor<<planned>> #C77800
+}
+
+legend right
+  Plain          = built today
+  Amber <<planned>> = in the PRD, not yet built
+endlegend
+
+node "Browser" as Client {
+    [client (React + Vite)]
+}
+
+node "Chez Huong Server (NestJS)" as Server {
+    component "Chez Huong API\n(global prefix /v1, 60 req/min/IP)" {
+        component "Auth Module" as AuthModule
+        component "Users Module" as UsersModule
+        component "Recipes Module\n(+ Ingredients / Nutrition / USDA)" as RecipesModule
+        component "Translation Module" as TranslationModule
+        component "Social Interaction Module" as SocialModule
+        component "Shared Module\n(SupabaseService)" as SharedModule
+        component "Health Module\n(GET /health)" as HealthModule
+        component "PrismaService" as PrismaService
+
+        AuthModule --> UsersModule : validates credentials
+        RecipesModule ..> SharedModule : image upload
+        SocialModule ..> RecipesModule : likes / comments
+        AuthModule --> PrismaService
+        UsersModule --> PrismaService
+        RecipesModule --> PrismaService
+        TranslationModule --> PrismaService
+        SocialModule --> PrismaService
+        HealthModule --> PrismaService : liveness ping
+    }
+}
+
+' === EXTERNAL SERVICES ===
+cloud "Google Cloud Translation API" as GoogleCloudTranslationAPI
+cloud "USDA FoodData Central API" as USDAAPI
+cloud "Email service\n(forgot password / verify email — later)" as EmailAPI <<planned>>
+
+node "Supabase" as Supabase {
+    database "PostgreSQL" as SupabaseDB
+    folder "Storage\n(recipe images)" as SupabaseStorage
+}
+
+' === RELATIONS ===
+Client --> Server : HTTPS / JSON (/v1, JWT Bearer)
+Client --> SupabaseStorage : GET public image URLs
+PrismaService --> SupabaseDB : SQL (DATABASE_URL / DIRECT_URL)
+SharedModule --> SupabaseStorage : HTTPS (upload public URLs)
+TranslationModule --> GoogleCloudTranslationAPI : HTTPS / JSON
+RecipesModule --> USDAAPI : HTTPS / JSON
+AuthModule ..> EmailAPI : HTTPS (reset / verify)
+@enduml

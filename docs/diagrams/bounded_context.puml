@@ -1,0 +1,55 @@
+@startuml context_map
+title Chez Huong — Module / Context Map (Modular Monolith)
+
+skinparam componentStyle rectangle
+skinparam defaultFontName Monospace
+skinparam rectangle {
+    BackgroundColor<<planned>> #FFF8E1
+    BorderColor<<planned>> #C77800
+}
+
+legend right
+  Plain          = built today
+  Amber <<planned>> = in the PRD, not yet built
+endlegend
+
+package "Auth" as AuthContext {
+    rectangle "AuthService"
+    rectangle "Guards + Strategies"
+}
+
+package "Users" as UsersContext {
+    rectangle "UsersService\n(safeUserSelect)"
+    rectangle "Role promotion\n(admin -> WRITER)" <<planned>>
+}
+
+package "Recipes" as RecipesContext {
+    rectangle "RecipesService"
+    rectangle "IngredientsService"
+    rectangle "NutritionalValueService"
+    rectangle "UsdaService"
+    rectangle "Recipe Linking\n(pairs / uses / variation)" <<planned>>
+    rectangle "Discovery\n(search / filter / popular / newest)"
+    rectangle "Draft/Publish + Delete"
+}
+
+package "Translation" as TranslationContext {
+    rectangle "TranslationsService\n(stored — source of truth)"
+    rectangle "GoogleTranslateService\n(machine proxy)"
+    rectangle "Locale coverage %\n(read fallback + badge)" <<planned>>
+}
+
+package "Social & Interactions" as SocialContext {
+    rectangle "Likes\n(= save for later)"
+    rectangle "Comments"
+    rectangle "Edit own comment" <<planned>>
+}
+
+' === RELATIONS BETWEEN MODULES ===
+AuthContext --> UsersContext : validates credentials
+RecipesContext --> UsersContext : author ref
+RecipesContext --> TranslationContext : translatable fields
+SocialContext --> RecipesContext : likes / comments on
+SocialContext --> UsersContext : actor ref
+
+@enduml

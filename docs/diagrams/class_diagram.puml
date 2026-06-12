@@ -1,0 +1,343 @@
+@startuml class_diagram
+title Chez Huong — Data Model (Prisma schema)
+
+skinparam componentStyle rectangle
+skinparam defaultFontName Monospace
+skinparam class {
+    BackgroundColor<<external>> #ECEFF1
+    BorderColor<<external>> #607D8B
+    BackgroundColor<<staging>> #F3E5F5
+    BorderColor<<staging>> #8E24AA
+    BackgroundColor<<shared>> #F0F0F0
+    BorderColor<<shared>> #666666
+}
+
+legend right
+  All classes match prisma/schema.prisma.
+  Grey <<external>> = USDA API shapes (not persisted as-is)
+  <<staging>> = transient · <<shared>> = shared interface
+endlegend
+
+' ===========================================================================
+' USER
+' ===========================================================================
+
+class User {
+    +id: string <<uuid>>
+    +firstName: string
+    +lastName: string
+    +email: string <<unique>>
+    +password: string
+    +role: Role
+}
+
+enum Role {
+    ADMIN
+    WRITER
+    READER
+}
+
+' ===========================================================================
+' RECIPE
+' ===========================================================================
+
+class Recipe {
+    +id: number <<autoincrement>>
+    +title: string
+    +description: string?
+    +locale: string
+    +prepTime: number
+    +prepTimeUnit: TimeUnit
+    +cookTime: number
+    +cookTimeUnit: TimeUnit
+    +difficulty: Difficulty
+    +type: RecipeType
+    +cuisine: string
+    +servings: number
+    +imageUrl: string?
+    +slug: string <<unique>>
+    +yield: string?
+    +status: RecipeStatus
+    +publishedAt: Date?
+    +createdAt: Date
+    +updatedAt: Date
+    +authorId: string
+}
+
+enum Difficulty {
+    EASY
+    MEDIUM
+    HARD
+}
+
+enum RecipeType {
+    BREAKFAST
+    MAIN
+    SIDE
+    DESSERT
+    APPETIZER
+    SALAD
+    SNACK
+}
+
+enum TimeUnit {
+    MINUTES
+    HOURS
+}
+
+enum RecipeStatus {
+    DRAFT
+    PUBLISHED
+}
+
+class RecipeLink {
+    +id: number
+    +fromId: number
+    +toId: number
+    +kind: RecipeLinkKind
+    +createdAt: Date
+    --
+    @@unique(fromId, toId, kind)
+    @@index(toId)
+    ' no self-link (fromId != toId) — enforced in the service
+}
+
+enum RecipeLinkKind {
+    PAIRS_WITH
+    USES
+    VARIATION_OF
+}
+
+class Particularity {
+    +id: number
+    +recipeId: number
+    +type: ParticularityType
+    --
+    @@unique(recipeId, type)
+}
+
+enum ParticularityType {
+    VEGETARIAN
+    VEGAN
+    GLUTEN_FREE
+    DAIRY_FREE
+    NUT_FREE
+    EGG_FREE
+    SEAFOOD_FREE
+    SOY_FREE
+    HALAL
+    KOSHER
+    LOW_SODIUM
+    LOW_SUGAR
+    LOW_CARB
+    HIGH_PROTEIN
+}
+
+class IngredientSection {
+    +id: number
+    +name: string
+    +recipeId: number
+}
+
+class RecipeIngredient {
+    +sectionId: number
+    +ingredientId: number
+    +quantity: string
+    +unit: string
+    --
+    @@id(sectionId, ingredientId)
+}
+
+class StepSection {
+    +id: number
+    +title: string
+    +recipeId: number
+}
+
+class Step {
+    +id: number
+    +order: number
+    +description: string
+    +mediaUrl: string?
+    +stepSectionId: number
+}
+
+' ===========================================================================
+' INGREDIENT / NUTRITION
+' ===========================================================================
+
+class Ingredient {
+    +id: number
+    +name: string <<unique>>
+    +fdcId: number? <<unique>>
+}
+
+class IngredientPortion {
+    +id: number
+    +ingredientId: number
+    +portionName: string
+    +gramWeight: number
+    --
+    @@unique(ingredientId, portionName)
+}
+
+class IngredientNutrition {
+    +id: number
+    +ingredientId: number <<unique>>
+    +servingSize: number?
+    .. per-100g nutrients ..
+    +createdAt / updatedAt: Date
+}
+
+interface NutrientValues <<shared>> {
+    +calories / protein / carbohydrates
+    +fiber / sugar
+    +totalFat / saturatedFat / ...
+    +sodium / potassium / ...
+    +vitaminA / vitaminC / ...
+    __(25 nutrient fields, all nullable)__
+}
+
+class PendingIngredientMatch <<staging>> {
+    +id: number
+    +searchQuery: string
+    +fdcId: number
+    +name: string
+    +description: string?
+    +dataType: string?
+}
+
+' ===========================================================================
+' USDA EXTERNAL DATA TYPES (not persisted as-is)
+' ===========================================================================
+
+class UsdaFoodMatch <<external>> {
+    +fdcId: number
+    +name: string
+    +description?: string
+    +dataType?: string
+}
+
+class UsdaNutritionData <<external>> {
+    Partial of NutrientValues
+}
+
+class UsdaPortionData <<external>> {
+    +portionName: string
+    +gramWeight: number
+}
+
+' ===========================================================================
+' TRANSLATION
+' ===========================================================================
+
+class Translation {
+    +id: number
+    +recipeId: number
+    +field: string
+    +locale: string
+    +value: string
+    +translatorId: string
+    +status: TranslationStatus
+    +createdAt / updatedAt: Date
+    --
+    @@unique(recipeId, field, locale)
+}
+
+enum TranslationStatus {
+    DRAFT
+    APPROVED
+}
+
+note bottom of Translation
+  "Translated 80%" coverage badge (PRD) is
+  <b>computed</b> from APPROVED Translations
+  per locale — no new column is stored.
+end note
+
+' ===========================================================================
+' SOCIAL FEATURES
+' ===========================================================================
+
+class Like {
+    +userId: string
+    +recipeId: number
+    --
+    @@id(userId, recipeId)
+    ' doubles as "save for later"
+}
+
+class Comment {
+    +id: number
+    +content: string
+    +createdAt: Date
+    +updatedAt: Date
+    +userId: string
+    +recipeId: number
+    +parentId: number?
+}
+
+' ===========================================================================
+' RELATIONSHIPS — Recipe structure
+' ===========================================================================
+
+User "1" --> "*" Recipe : authors
+User "1" --> "*" Translation : translates
+User "1" --> "*" Like
+User "1" --> "*" Comment
+
+Recipe "1" --> "*" IngredientSection : contains
+Recipe "1" --> "*" StepSection : contains
+Recipe "1" --> "*" Particularity : tagged with
+Recipe "1" --> "*" Translation : translated by
+Recipe "1" --> "*" Like
+Recipe "1" --> "*" Comment
+
+Recipe "1" --> "*" RecipeLink : from
+Recipe "1" --> "*" RecipeLink : to
+
+IngredientSection "1" --> "*" RecipeIngredient : contains
+RecipeIngredient "*" --> "1" Ingredient : references
+StepSection "1" --> "*" Step : contains
+Comment "0..1" --> "*" Comment : replies
+
+note bottom of RecipeLink
+  "Pairs with" is symmetric — stored once,
+  surfaced on both recipes. "Uses" / "Variation
+  of" are directed. Navigational only: ingredients
+  & nutrition never roll up across a link.
+  (Schema is live; the endpoints land in M3.)
+end note
+
+' ===========================================================================
+' RELATIONSHIPS — enums
+' ===========================================================================
+
+User ..> Role
+Recipe ..> Difficulty
+Recipe ..> RecipeType
+Recipe ..> TimeUnit
+Recipe ..> RecipeStatus
+RecipeLink ..> RecipeLinkKind
+Particularity ..> ParticularityType
+Translation ..> TranslationStatus
+
+' ===========================================================================
+' RELATIONSHIPS — Ingredient -> Nutrition / Portions
+' ===========================================================================
+
+Ingredient "1" --> "0..1" IngredientNutrition : per-100g values
+Ingredient "1" --> "*" IngredientPortion : unit -> gram
+IngredientNutrition ..|> NutrientValues
+UsdaNutritionData ..|> NutrientValues : Partial
+
+' ===========================================================================
+' RELATIONSHIPS — USDA external data + staging
+' ===========================================================================
+
+Ingredient "0..1" ..> "0..1" UsdaFoodMatch : linked via fdcId
+UsdaFoodMatch ..> UsdaNutritionData : provides nutrition
+UsdaFoodMatch ..> UsdaPortionData : provides portions
+PendingIngredientMatch ..> Ingredient : promoted via POST /ingredients/confirm
+
+@enduml

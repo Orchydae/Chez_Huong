@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- fonts loaded here (not via CSS @import) so the bundle CSS no longer
+       blocks on a serial fonts.googleapis.com hop; preconnect warms the
+       gstatic origin. Weights trimmed to those actually rendered. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,700;1,400&display=swap" />
+  <!-- Home is the primary entry; the hero is its LCP. This SPA only renders the
+       <img> after the JS bundle boots, so preload starts the (responsive) fetch
+       in parallel — mirrors HomePage's srcset/sizes exactly so there's no double
+       download. A deep link to another route pays one right-sized hero it won't show. -->
+  <link rel="preload" as="image" type="image/webp"
+    imagesrcset="/viet-hero-768.webp 768w, /viet-hero-1280.webp 1280w, /viet-hero-1920.webp 1920w"
+    imagesizes="100vw" />
+  <title>Chez Huong</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

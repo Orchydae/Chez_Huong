@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Code Review Configuration",
+  "description": "Configuration for global-code-reviewer agent behavior",
+  "type": "object",
+  "properties": {
+    "confidence_threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 60,
+      "description": "Confidence threshold percentage (0-100) for reporting issues. Lower = more issues reported."
+    },
+    "severity_override": {
+      "type": "object",
+      "description": "Override default severity for specific check types",
+      "additionalProperties": {
+        "enum": ["critical", "important", "suggestion", "ignore"]
+      },
+      "examples": [{
+        "yagni": "suggestion",
+        "naming": "ignore",
+        "performance": "important"
+      }]
+    },
+    "disabled_checks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of check categories to completely disable",
+      "examples": [
+        ["comment_suggestions", "function_length"]
+      ]
+    },
+    "custom_patterns": {
+      "type": "object",
+      "description": "Custom regex patterns to check with associated messages",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["pattern", "message"],
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "Regular expression pattern to match against code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Message to display when pattern is matched"
+          },
+          "severity": {
+            "enum": ["critical", "important", "suggestion"],
+            "default": "suggestion",
+            "description": "Severity level for this custom pattern"
+          }
+        }
+      }
+    },
+    "max_issues_per_file": {
+      "type": "number",
+      "minimum": 1,
+      "default": 20,
+      "description": "Maximum number of issues to report per file (prevents overwhelming reports)"
+    },
+    "excluded_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "File paths or glob patterns to exclude from review",
+      "examples": [
+        ["**/*.test.ts", "**/*.spec.ts", "**/migrations/**"]
+      ]
+    },
+    "specialists": {
+      "type": "object",
+      "description": "Control which specialist agents run during review",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of specialist IDs to enable. When specified, only these specialists will run. Default: all specialists."
+        },
+        "disabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of specialist IDs to disable. These specialists will be skipped during review."
+        }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Control framework extension loading for specialist agents",
+      "properties": {
+        "auto_detect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect frameworks from project config and load matching extensions"
+        },
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of extension IDs to explicitly enable, in addition to auto-detected ones"
+        },
+        "disabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of extension IDs to disable, even if auto-detected"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ticket": {
+      "type": "object",
+      "description": "Configure ticket context integration for reviews",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable ticket context gathering during review"
+        },
+        "prompt_when_missing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prompt the user for ticket information when not found in branch name or PR"
+        },
+        "jira_project_key": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Jira project key to use for ticket lookups (e.g. 'PROJ'). When null, attempts to detect from branch name."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

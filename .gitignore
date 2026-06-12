@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+coverage/
+tmp/
+.tmp
+.temp
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+*.local
+
+# Prisma generated client
+server/generated/prisma/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Claude
+.claude/settings.local.json
+
+# Code review output
+.code-review/
+
+# Auto-generated artifacts (Lighthouse reports, etc.) — keep the folder, ignore its contents.
+# **/ so it matches at any depth (client/.auto-generated/, server/.auto-generated/, …).
+**/.auto-generated/*
+!**/.auto-generated/README.md

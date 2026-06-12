@@ -1,0 +1,156 @@
+@startuml client_component_diagram
+title Chez Huong — Client Component Diagram (rebuilt frontend: pages + shared components + one API layer)
+
+skinparam componentStyle rectangle
+skinparam defaultFontName Monospace
+
+' ===========================================================================
+' APP SHELL  (always on screen, owns routing)
+' ===========================================================================
+
+package "App shell" as Shell {
+    [App.tsx\n(routes)] as App
+    [Navbar\n(search entry, auth menu)] as Navbar
+    [Footer] as Footer
+    [ToastHost] as Toast
+
+    note bottom of App
+      Routes:
+      /                      -> HomePage
+      /recipes/:slugOrId     -> RecipePage   (id redirects to slug)
+      /recipes/create        -> CreateRecipePage   (writer/admin)
+      /recipes/:id/edit      -> EditRecipePage     (writer/admin)
+      /my-recipes            -> MyRecipesPage      (writer/admin)
+      /saved                 -> SavedPage          (any signed-in user)
+      /admin/users           -> AdminUsersPage     (admin)
+      *                      -> NotFoundPage (404)
+    end note
+}
+
+' ===========================================================================
+' PAGES  (one folder per route — composition only, no fetch logic)
+' ===========================================================================
+
+package "pages/" as Pages {
+    [HomePage\n(Discovery: search, filters,\nnewest / popular)] as Home
+    [RecipePage\n(read view + nutrition,\nlinks, likes, comments)] as Read
+    [CreateRecipePage] as Create
+    [EditRecipePage] as Edit
+    [MyRecipesPage\n(own recipes incl. Drafts,\npublish / unpublish / delete)] as Mine
+    [SavedPage\n(liked recipes = saved list,\nnewest-saved first)] as Saved
+    [AdminUsersPage\n(admin: search members,\npromote / demote roles)] as Admin
+    [NotFoundPage] as NotFound
+}
+
+' ===========================================================================
+' SHARED COMPONENTS  (reused across pages)
+' ===========================================================================
+
+package "components/" as Components {
+    package "auth" as AuthUI {
+        [LoginModal]
+        [RegisterModal]
+        [RequireRole\n(route guard)] as RequireRole
+    }
+    package "recipe" as RecipeUI {
+        [RecipeCard\n(image, title, time, like count)] as Card
+        [RecipeForm\n(shared by Create + Edit:\nsections, steps, photos,\nDraft/Publish choice)] as Form
+        [IngredientAutocomplete\n(local + USDA search)] as Autocomplete
+        [NutritionPanel] as Nutrition
+        [RecipeLinksPanel\n(Pairs with / Uses / Variation of)] as Links
+    }
+    package "social" as SocialUI {
+        [LikeButton] as Like
+        [ShareButton\n(native share / copy link)] as Share
+        [CommentThread\n(nested replies any depth,\nedit / delete own, load more)] as Comments
+    }
+    package "ui" {
+        [Button / Input / Modal /\nConfirmDialog / Spinner] as UiKit
+    }
+}
+
+' ===========================================================================
+' API LAYER  — the ONLY code allowed to talk to the server
+' ===========================================================================
+
+package "api/" as Api {
+    [client.ts\n(base URL + /v1, attaches JWT,\n401 -> logout, error normalizing)] as Client
+    [types.ts\n(Recipe, User, Comment, ...\nmirrors server Prisma rows)] as Types
+    [auth.api.ts\n(login, register, profile,\nAuthProvider + useAuth)] as AuthApi
+    [recipes.api.ts\n(discovery, read by slug/id,\ncreate, update, publish,\nunpublish, delete, my-recipes,\nliked/saved list,\nnutrition, links, upload-image)] as RecipesApi
+    [social.api.ts\n(toggle like, like state,\ncomments, reply, edit, delete,\nload-more replies)] as SocialApi
+    [ingredients.api.ts\n(search, confirm —\nwriter/admin only)] as IngredientsApi
+    [users.api.ts\n(directory + role promotion —\nadmin only)] as UsersApi
+
+    note bottom of Client
+      TanStack Query wraps every call:
+      caching, loading / error states,
+      auto-refresh after a save.
+    end note
+}
+
+' ===========================================================================
+' LIB  (no server contact, no UI)
+' ===========================================================================
+
+package "lib/" as Lib {
+    [i18n\n(react-i18next, fr.json —\nall UI text lives here)] as I18n
+    [format.ts\n(time, quantities)] as Format
+}
+
+' ===========================================================================
+' EXTERNAL
+' ===========================================================================
+
+cloud "NestJS API\n(/v1, port 3000)" as Server
+database "localStorage\n(JWT token)" as Storage
+
+' ===========================================================================
+' WIRING  (package level — read top to bottom:
+'          App shell -> pages -> components -> api -> server)
+' ===========================================================================
+
+Shell --> Pages : shows the page for\nthe current route
+Pages --> Components : pages are assembled\nfrom shared components
+Pages --> Api : load & save data\nvia hooks
+Components --> Api : widgets that fetch their own data\n(likes, comments, nutrition,\nrecipe links, ingredient search)
+Pages ..> Lib : all visible text (i18n)\nand formatting
+Components ..> Lib
+
+' --- inside App shell: App.tsx mounts the always-on-screen chrome
+App --> Navbar
+App --> Footer
+App --> Toast
+
+' --- how auth hangs together: no login page — the Navbar opens the
+'     modals, the modals sign you in via auth.api.ts, and RequireRole
+'     uses that signed-in state to guard the writer/admin routes
+Navbar --> AuthUI : opens login /\nregister modals
+AuthUI --> AuthApi : sign in / sign up,\nwho am I?
+App --> RequireRole : wraps writer/admin\nroutes (guard)
+
+' --- inside components/: the recipe form embeds the ingredient
+'     search box; every component is built from the ui kit
+Form --> Autocomplete
+AuthUI ..> UiKit
+RecipeUI ..> UiKit
+SocialUI ..> UiKit
+
+' --- inside api/: every *.api.ts call funnels through client.ts,
+'     which is the single door to the server
+AuthApi --> Client
+RecipesApi --> Client
+SocialApi --> Client
+IngredientsApi --> Client
+UsersApi --> Client
+Client --> Server : HTTPS JSON\n(Bearer JWT)
+AuthApi --> Storage : keeps the\nlogin token
+
+legend bottom left
+  |= Line style |= Meaning |
+  | solid arrow (──▶) | main flow: the left side actively uses the right side\nto do its job — render pages, load & save data |
+  | dotted arrow (┈┈▶) | light helper use: just borrows utilities\n(translated text, date/quantity formatting) |
+  | dotted line, no arrowhead (┈┈) | attaches a note to the thing it describes |
+endlegend
+
+@enduml

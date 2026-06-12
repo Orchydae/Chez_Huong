@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Paragon-Faction/AIChatSharedResources/agents-common/review-finding.schema.json",
+  "title": "ReviewFinding",
+  "description": "Schema for structured code review findings produced by specialist agents and consumed by the orchestrator for deduplication, filtering, and report rendering.",
+  "type": "object",
+  "required": ["id", "category", "severity", "confidence", "file", "startLine", "title", "description", "specialist"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z]+-\\d{3}$",
+      "description": "Unique finding identifier scoped to the specialist (e.g., sec-001, corr-012)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "security",
+        "correctness",
+        "quality",
+        "testing",
+        "performance",
+        "api-design",
+        "architecture",
+        "requirements",
+        "documentation"
+      ],
+      "description": "Review category this finding belongs to"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "important", "suggestion"],
+      "description": "Severity level of the finding"
+    },
+    "confidence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Confidence score (0-100) indicating how certain the specialist is about this finding"
+    },
+    "file": {
+      "type": "string",
+      "description": "Relative file path where the finding was identified"
+    },
+    "startLine": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Starting line number of the finding in the file"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short title summarizing the finding"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed explanation of the finding, why it matters, and what the risk is"
+    },
+    "specialist": {
+      "type": "string",
+      "description": "ID of the specialist that produced this finding (e.g., security, correctness, quality)"
+    },
+    "endLine": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Ending line number of the finding (optional, defaults to startLine)"
+    },
+    "suggestion": {
+      "type": "string",
+      "description": "Suggested fix or improvement"
+    },
+    "codeBefore": {
+      "type": "string",
+      "description": "Code snippet showing the current problematic code"
+    },
+    "codeAfter": {
+      "type": "string",
+      "description": "Code snippet showing the suggested replacement code"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Freeform tags for grouping and filtering (e.g., requirements-gap, scope-creep)"
+    },
+    "ticketRef": {
+      "type": "string",
+      "description": "Ticket ID for requirements alignment findings (e.g., PROJ-1234)"
+    }
+  },
+  "additionalProperties": false
+}

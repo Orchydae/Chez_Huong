@@ -1,0 +1,32 @@
+/* Google Fonts are loaded via <link> in index.html (with preconnect) so the
+   bundled CSS doesn't block first paint on a serial font-CSS request. */
+@import 'tailwindcss';
+
+/*
+ * Brand design tokens — ported from the previous client's :root variables.
+ * Use these as Tailwind utilities: bg-cream, text-forest, bg-leaf, text-coral,
+ * font-sans (Be Vietnam Pro), font-serif (Cormorant Garamond).
+ */
+@theme {
+  --color-cream: #f8efea;
+  --color-forest: #192f01;
+  --color-leaf: #ded369;
+  --color-coral: #e0475b;
+  --color-contrast: #d2d2d2;
+
+  --font-sans: 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+}
+
+body {
+  @apply bg-forest font-sans text-forest min-h-screen overflow-x-hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply font-serif font-bold leading-tight;
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolvePackageJsonExports": false,
+    "ignoreDeprecations": "6.0",
+    "declaration": false,
+    "incremental": false
+  },
+  "include": ["src/**/*.ts"]
+}

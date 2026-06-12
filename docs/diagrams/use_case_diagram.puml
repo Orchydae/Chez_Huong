@@ -1,0 +1,111 @@
+@startuml use_case_diagram
+title Chez Huong — Use Case Diagram (built + PRD target)
+
+skinparam dpi 150
+skinparam usecase {
+  BorderColor #666
+  ArrowColor  #444
+  BackgroundColor<<planned>> #FFF8E1
+  BorderColor<<planned>> #C77800
+}
+left to right direction
+
+legend right
+  Plain          = built today
+  Amber <<planned>> = in the PRD, not yet built
+endlegend
+
+actor "Visiteur"          as Visiteur
+actor "Lecteur"  <<READER>> as Lecteur
+actor "Rédacteur" <<WRITER>> as Redacteur
+actor "Administrateur" <<ADMIN>> as Admin
+
+actor "Moteur nutritionnel" as SCN
+actor "API USDA"            as USDA
+actor "Google Translate"    as GTranslate
+
+rectangle "Chez Huong" as CH {
+    ' --- built today ---
+    usecase "UC-01\nS'inscrire"                       as UC01
+    usecase "UC-02\nSe connecter"                     as UC02
+    usecase "UC-03\nConsulter les recettes"           as UC03
+    usecase "UC-04\nConsulter les valeurs nutritives" as UC04
+    usecase "UC-05\nAimer (= enregistrer)"            as UC05
+    usecase "UC-06\nCommenter / répondre"             as UC06
+    usecase "UC-07\nSupprimer son commentaire"        as UC07
+    usecase "UC-08\nÉcrire une recette"               as UC08
+    usecase "UC-09\nModifier une recette"             as UC09
+    usecase "UC-10\nTéléverser une image"             as UC10
+    usecase "UC-11\nTraduire un champ (machine)"      as UC11
+    usecase "UC-12\nGérer les traductions"            as UC12
+    usecase "UC-13\nRechercher / confirmer un ingrédient" as UC13
+
+    ' --- Discovery + lifecycle: built in M1–M2 (UC-14..16, 22, 23) ---
+    usecase "UC-14\nRechercher & filtrer\n(cuisine/régime/difficulté/type)" as UC14
+    usecase "UC-15\nTrouver par ingrédient"           as UC15
+    usecase "UC-16\nPopulaires / Récentes"            as UC16
+    ' --- still planned (PRD) ---
+    usecase "UC-17\nPage d'un auteur"                 as UC17 <<planned>>
+    usecase "UC-18\nLire dans ma langue\n(+ badge \"traduit 80%\")"  as UC18 <<planned>>
+    usecase "UC-19\nPartager une recette"             as UC19 <<planned>>
+    usecase "UC-20\nAide à la cuisine\n(portions, liste de courses, mode cuisine)" as UC20 <<planned>>
+    usecase "UC-21\nModifier son commentaire"         as UC21 <<planned>>
+    usecase "UC-22\nSupprimer une recette"            as UC22
+    usecase "UC-23\nBrouillon <-> Publié"             as UC23
+    usecase "UC-24\nLier des recettes\n(associe / utilise / variante)" as UC24 <<planned>>
+    usecase "UC-25\nPromouvoir un utilisateur"        as UC25 <<planned>>
+}
+
+' Role hierarchy (broader role inherits the narrower one's use cases)
+Visiteur  <|-- Lecteur
+Lecteur   <|-- Redacteur
+Redacteur <|-- Admin
+
+' Visitor (unauthenticated / public reads + discovery + cooking help)
+Visiteur --> UC01
+Visiteur --> UC02
+Visiteur --> UC03
+Visiteur --> UC04
+Visiteur --> UC14
+Visiteur --> UC15
+Visiteur --> UC16
+Visiteur --> UC17
+Visiteur --> UC18
+Visiteur --> UC19
+Visiteur --> UC20
+
+' Reader (authenticated)
+Lecteur --> UC05
+Lecteur --> UC06
+Lecteur --> UC07
+Lecteur --> UC21
+
+' Writer / Admin (content authoring + lifecycle + translation curation)
+Redacteur --> UC08
+Redacteur --> UC09
+Redacteur --> UC10
+Redacteur --> UC11
+Redacteur --> UC12
+Redacteur --> UC13
+Redacteur --> UC22
+Redacteur --> UC23
+Redacteur --> UC24
+
+' Admin-only
+Admin --> UC25
+
+' External systems
+UC04 --> SCN  : computes on demand
+UC20 --> SCN  : nutrition driver breakdown
+SCN  --> USDA : nutrition + portions
+UC13 --> USDA : food search
+UC11 --> GTranslate : machine translation
+
+note bottom of UC18
+  Politique hybride : la lecture applique uniquement
+  les traductions humaines stockées et retombe sur la
+  langue d'origine — aucune traduction machine au
+  moment de la lecture (UC-18 ne touche pas Google).
+end note
+
+@enduml

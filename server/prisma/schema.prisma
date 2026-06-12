@@ -1,0 +1,321 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+  moduleFormat = "cjs"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  WRITER
+  READER
+}
+
+enum ParticularityType {
+  VEGETARIAN
+  VEGAN
+  GLUTEN_FREE
+  DAIRY_FREE
+  NUT_FREE
+  EGG_FREE
+  SEAFOOD_FREE
+  SOY_FREE
+  HALAL
+  KOSHER
+  LOW_SODIUM
+  LOW_SUGAR
+  LOW_CARB
+  HIGH_PROTEIN
+}
+
+model User {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  password  String
+  role      Role
+
+  recipes      Recipe[]
+  likes        Like[]
+  comments     Comment[]
+  translations Translation[]
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum RecipeType {
+  BREAKFAST
+  MAIN
+  SIDE
+  DESSERT
+  APPETIZER
+  SALAD
+  SNACK
+}
+
+enum TimeUnit {
+  MINUTES
+  HOURS
+}
+
+enum RecipeStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Recipe {
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String?
+  locale      String  // original language code, e.g. "vi", "fr", "en"
+  prepTime    Int // in minutes
+  prepTimeUnit TimeUnit @default(MINUTES)
+  cookTime    Int // in minutes
+  cookTimeUnit TimeUnit @default(MINUTES)
+  difficulty  Difficulty
+  type        RecipeType
+  cuisine     String // e.g., "Vietnamese", "French"
+  servings    Int
+  imageUrl    String? // Supabase Storage public URL
+
+  slug        String       @unique // clean web address; generated from title, frozen at first publish (ADR-03)
+  yield       String? // optional display-only ("makes 24 dumplings"); servings still drives nutrition
+  status      RecipeStatus @default(DRAFT)
+  publishedAt DateTime? // set on first publish, never cleared on unpublish — this is what freezes the slug
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  authorId    String
+  author      User    @relation(fields: [authorId], references: [id])
+
+  particularities    Particularity[]
+  stepSections       StepSection[]
+  ingredientSections IngredientSection[]
+  likes              Like[]
+  comments           Comment[]
+  translations       Translation[]
+  linksFrom          RecipeLink[]        @relation("RecipeLinksFrom")
+  linksTo            RecipeLink[]        @relation("RecipeLinksTo")
+}
+
+enum RecipeLinkKind {
+  PAIRS_WITH   // symmetric: stored once, shown on both recipes
+  USES         // directed: this recipe calls for another (no nutrition roll-up)
+  VARIATION_OF // directed: this recipe is an alternate version of the target
+}
+
+// A navigational relationship from one Recipe to another. Nothing composes —
+// ingredients/steps/nutrition never roll up across a link. Self-links and exact
+// duplicates are rejected in the service layer (the @@unique blocks exact dups).
+model RecipeLink {
+  id        Int            @id @default(autoincrement())
+  fromId    Int
+  toId      Int
+  kind      RecipeLinkKind
+  createdAt DateTime       @default(now())
+
+  from Recipe @relation("RecipeLinksFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Recipe @relation("RecipeLinksTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId, kind])
+  @@index([toId])
+}
+
+model IngredientSection {
+  id       Int                @id @default(autoincrement())
+  name     String
+  recipeId Int
+  recipe   Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+}
+
+model Particularity {
+  id       Int               @id @default(autoincrement())
+  recipeId Int
+  recipe   Recipe            @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  type     ParticularityType
+
+  @@unique([recipeId, type])
+}
+
+model StepSection {
+  id       Int    @id @default(autoincrement())
+  title    String
+  recipeId Int
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  steps    Step[]
+}
+
+model Step {
+  id            Int         @id @default(autoincrement())
+  order         Int
+  description   String
+  mediaUrl      String?
+  stepSectionId Int
+  stepSection   StepSection @relation(fields: [stepSectionId], references: [id], onDelete: Cascade)
+}
+
+model Ingredient {
+  id           Int                     @id @default(autoincrement())
+  name         String                  @unique // canonical English name (from USDA)
+  fdcId        Int?                    @unique // FoodData Central ID (link to USDA)
+  recipes      RecipeIngredient[]
+  nutrition    IngredientNutrition?
+  portions     IngredientPortion[]
+  translations IngredientTranslation[]
+}
+
+// Localized ingredient names. English == Ingredient.name (no row stored);
+// French / Vietnamese are curated in-app (Google-Translate-assisted, then
+// saved). One row per (ingredient, locale).
+model IngredientTranslation {
+  id           Int        @id @default(autoincrement())
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  locale       String // e.g. "fr", "vi"
+  name         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([ingredientId, locale])
+}
+
+// Stores USDA portion weights for unit-to-gram conversion
+// e.g., "1 cup flour = 125g", "1 tbsp butter = 14g"
+model IngredientPortion {
+  id           Int        @id @default(autoincrement())
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  
+  portionName  String     // normalized unit: "cup", "tbsp", "large", "slice"
+  gramWeight   Float      // grams per 1 unit of this portion
+  
+  @@unique([ingredientId, portionName])
+}
+
+model IngredientNutrition {
+  id            Int        @id @default(autoincrement())
+  ingredientId  Int        @unique
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  // Per 100g values (USDA standard)
+  servingSize   Float? // in grams
+
+  // Macronutrients
+  calories      Float? // kcal
+  protein       Float? // g
+  carbohydrates Float? // g
+  fiber         Float? // g
+  sugar         Float? // g
+
+  // Fats (detailed breakdown)
+  totalFat      Float? // g
+  saturatedFat  Float? // g
+  monounsatFat  Float? // g (monounsaturated)
+  polyunsatFat  Float? // g (polyunsaturated)
+  transFat      Float? // g
+  cholesterol   Float? // mg
+
+  // Minerals
+  sodium        Float? // mg
+  potassium     Float? // mg
+  calcium       Float? // mg
+  iron          Float? // mg
+  magnesium     Float? // mg
+  zinc          Float? // mg
+
+  // Vitamins
+  vitaminA      Float? // mcg (RAE)
+  vitaminC      Float? // mg
+  vitaminD      Float? // mcg
+  vitaminE      Float? // mg
+  vitaminK      Float? // mcg
+  vitaminB6     Float? // mg
+  vitaminB12    Float? // mcg
+  folate        Float? // mcg
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PendingIngredientMatch {
+  id          Int      @id @default(autoincrement())
+  searchQuery String   // The original search term
+  fdcId       Int      // USDA FoodData Central ID
+  name        String   // Food name from USDA
+  description String?  // Additional description from USDA
+  dataType    String?  // e.g., "Foundation", "SR Legacy", "Branded"
+  createdAt   DateTime @default(now())
+
+  @@index([searchQuery])
+}
+
+model RecipeIngredient {
+  sectionId    Int
+  ingredientId Int
+  quantity     String
+  unit         String
+
+  section    IngredientSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  ingredient Ingredient        @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([sectionId, ingredientId])
+}
+
+model Like {
+  userId    String
+  recipeId  Int
+  createdAt DateTime @default(now()) // when the recipe was saved — orders the "saved list" (M5), most-recent first
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, recipeId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // supports "edit your own comment" (M5)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId  Int
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  // Reply support - self-referential relation
+  parentId  Int?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+}
+
+
+enum TranslationStatus {
+  DRAFT
+  APPROVED
+}
+
+model Translation {
+  id           Int               @id @default(autoincrement())
+  recipeId     Int
+  recipe       Recipe            @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  field        String            // e.g. "title", "description", "stepSection.1.step.2.description"
+  locale       String            // target language code, e.g. "fr", "en"
+  value        String            // the translated text
+  translatorId String
+  translator   User              @relation(fields: [translatorId], references: [id])
+  status       TranslationStatus @default(DRAFT)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([recipeId, field, locale])
+}
