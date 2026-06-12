@@ -159,3 +159,33 @@ These commands all run from inside `server/` and act on the Supabase database po
 | `npx prisma db seed` | Run `prisma/seed.ts` to populate reference data. |
 
 > ⚠️ `migrate dev` writes to whatever database `DIRECT_URL` points at. Make sure that's a development Supabase project, not production.
+
+---
+
+## Deployment (where this is hosted)
+
+> Quick memory aid — the repo holds no deploy config, so this section is the record.
+
+| Part | Host | Live URL | Source |
+|---|---|---|---|
+| **Frontend** | **Vercel** | https://chezhuong.vercel.app | this repo, root dir `client/` (`npm run build` → `dist/`) |
+| **Backend** | **Render** (Docker web service "Chez_Huong", **Free** tier) | https://chez-huong.onrender.com | this repo, root dir `server/`, built from `server/Dockerfile`, branch `main` |
+
+- **Free-tier cold start:** the Render instance spins down after ~15 min idle and takes ~50 s to wake on the next request. Expected, not a bug.
+- **How the backend boots on Render:** the Docker production stage runs `CMD npm run start:prod:deploy`, i.e. **`npx prisma migrate deploy && node dist/src/main`** — so every deploy applies pending migrations against the Supabase DB before starting. A failed/mismatched migration makes the container **exit 1 / crash-loop**, and Render keeps serving the previous good build.
+- **API is under `/v1`** (`app.setGlobalPrefix('v1')`). The base URL is the host with no `/v1` and no trailing slash — the client appends `/v1` itself.
+- **SPA deep links:** `client/vercel.json` rewrites every path to `/index.html` so React Router can handle routes like `/recipes/:slug`. Without it, pasting or refreshing a deep link returns Vercel's own `404: NOT_FOUND` (only the home page and in-app navigation would work). The file must sit in Vercel's configured **Root Directory** (`client`).
+
+### The two env vars that wire frontend ↔ backend
+| Where | Variable | Value | Notes |
+|---|---|---|---|
+| **Vercel** (frontend) | `VITE_API_URL` | `https://chez-huong.onrender.com` | **No** `/v1`, **no** trailing slash. Vite inlines this at build time, so **redeploy the frontend** after changing it. |
+| **Render** (backend) | `CLIENT_URL` | `https://chezhuong.vercel.app` | The single CORS-allowed origin (exact, no trailing slash). If unset, CORS falls back to `http://localhost:5173` and the live site is blocked. Only one origin is allowed, so Vercel **preview** URLs won't pass CORS. |
+
+Render also needs every required server env var (see `server/.env.example` / `env.validation.ts`): `JWT_SECRET`, `DATABASE_URL`, `DIRECT_URL`, `USDA_API_KEY`, `GOOGLE_CLOUD_TRANSLATION_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — a missing one also makes boot fail (Joi validation throws).
+
+### If the live site can't reach the backend
+1. **Read the Render logs** (dashboard → the service → Logs, or the "service logs" link on a failed event) — `Exited with status 1` is a **boot crash**, and the log line says why.
+2. Most common after a git rebase: **`prisma migrate deploy` fails** because the migration history no longer matches the `_prisma_migrations` table. Reconcile locally (`npx prisma migrate status`, then `npx prisma migrate resolve …`) until `migrate deploy` succeeds against the prod DB.
+3. Or a **required env var is missing** on Render (see list above).
+4. Then **Manual Deploy → Clear build cache & deploy** the latest `main`. Verify with `curl https://chez-huong.onrender.com/v1/recipes` → should be `200`.
