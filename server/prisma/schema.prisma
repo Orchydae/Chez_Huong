@@ -105,6 +105,7 @@ model Recipe {
   translations       Translation[]
   linksFrom          RecipeLink[]        @relation("RecipeLinksFrom")
   linksTo            RecipeLink[]        @relation("RecipeLinksTo")
+  usedAsIngredientIn RecipeIngredient[]  @relation("RecipeAsIngredient")
 }
 
 enum RecipeLinkKind {
@@ -113,9 +114,12 @@ enum RecipeLinkKind {
   VARIATION_OF // directed: this recipe is an alternate version of the target
 }
 
-// A navigational relationship from one Recipe to another. Nothing composes —
-// ingredients/steps/nutrition never roll up across a link. Self-links and exact
-// duplicates are rejected in the service layer (the @@unique blocks exact dups).
+// A navigational relationship from one Recipe to another. A RecipeLink itself
+// composes nothing — steps/ingredients never roll up across it. (Nutrition DOES
+// compose in one specific case: a RecipeIngredient.recipeRef — a recipe used as
+// an ingredient — whose per-serving nutrition rolls up by servings. That is a
+// distinct mechanism from these links.) Self-links and exact duplicates are
+// rejected in the service layer (the @@unique blocks exact dups).
 model RecipeLink {
   id        Int            @id @default(autoincrement())
   fromId    Int
@@ -259,16 +263,23 @@ model PendingIngredientMatch {
   @@index([searchQuery])
 }
 
+// One line in a recipe's ingredient list. Its nutrition source is at most ONE of:
+// a catalogue Ingredient (USDA-backed), OR another Recipe used as an ingredient
+// (whose nutrition rolls up by servings), OR neither — a free-text row that only
+// shows `displayName`. `displayName` is an optional, per-recipe, translatable
+// override of the shown name (the USDA name is kept only for the nutrition math).
 model RecipeIngredient {
+  id           Int     @id @default(autoincrement())
   sectionId    Int
-  ingredientId Int
-  quantity     String
-  unit         String
+  ingredientId Int?
+  recipeRefId  Int?
+  displayName  String?
+  quantity     String // may be "" (e.g. "to taste"); for a recipe-ref it's the servings count
+  unit         String // for a recipe-ref this is "servings"
 
   section    IngredientSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  ingredient Ingredient        @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-
-  @@id([sectionId, ingredientId])
+  ingredient Ingredient?       @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  recipeRef  Recipe?           @relation("RecipeAsIngredient", fields: [recipeRefId], references: [id], onDelete: SetNull)
 }
 
 model Like {

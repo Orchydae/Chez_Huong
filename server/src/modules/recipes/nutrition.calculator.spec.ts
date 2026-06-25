@@ -57,6 +57,27 @@ describe('normalizeUnit', () => {
     it('passes through an unknown unit unchanged (but normalized)', () => {
         expect(normalizeUnit('Clove')).toBe('clove');
     });
+
+    it('folds count-based spellings onto canonical "piece"/"unit"', () => {
+        expect(normalizeUnit('Pcs')).toBe('piece');
+        expect(normalizeUnit('pc')).toBe('piece');
+        expect(normalizeUnit('pieces')).toBe('piece');
+        expect(normalizeUnit('morceaux')).toBe('piece');
+        expect(normalizeUnit('Units')).toBe('unit');
+    });
+
+    it('folds French unit names and abbreviations onto canonical units', () => {
+        expect(normalizeUnit('Tasse')).toBe('cup');
+        expect(normalizeUnit('cuillère à soupe')).toBe('tbsp');
+        expect(normalizeUnit('c. à soupe')).toBe('tbsp');
+        expect(normalizeUnit('càs')).toBe('tbsp');
+        expect(normalizeUnit('cuillère à thé')).toBe('tsp');
+        expect(normalizeUnit('c. à thé')).toBe('tsp');
+        expect(normalizeUnit('c à thé')).toBe('tsp'); // accents/periods optional
+        expect(normalizeUnit('litre')).toBe('l');
+        expect(normalizeUnit('Grammes')).toBe('g');
+        expect(normalizeUnit('kilo')).toBe('kg');
+    });
 });
 
 describe('convertToGrams', () => {
@@ -94,6 +115,27 @@ describe('convertToGrams', () => {
 
     it('returns 0 for an unconvertible count unit', () => {
         expect(convertToGrams(9, '2', 'clove', noPortions)).toBe(0);
+    });
+
+    it('converts a "pcs" unit via a portion stored under canonical "piece"', () => {
+        const portions: PortionMap = new Map([[portionKey(5, 'piece'), 120]]);
+        // author typed "Pcs"; the stored portion is keyed "piece" → they line up
+        expect(convertToGrams(5, '2', 'Pcs', portions)).toBe(240); // 2 × 120g
+        expect(convertToGrams(5, '2', 'Pcs', noPortions)).toBe(0); // still skipped without a weight
+    });
+
+    it('converts French volume and weight units', () => {
+        expect(convertToGrams(1, '2', 'tasse', noPortions)).toBe(480); // 2 × 240ml ≈ 480g
+        expect(convertToGrams(1, '1', 'c. à soupe', noPortions)).toBe(15);
+        expect(convertToGrams(1, '20', 'cl', noPortions)).toBe(200); // 20 × 10ml
+        expect(convertToGrams(1, '500', 'grammes', noPortions)).toBe(500);
+        expect(convertToGrams(1, '1', 'kilo', noPortions)).toBe(1000);
+    });
+
+    it('treats French negligible units as zero', () => {
+        expect(convertToGrams(1, '1', 'pincée', noPortions)).toBe(0);
+        expect(convertToGrams(1, '3', 'gouttes', noPortions)).toBe(0);
+        expect(convertToGrams(1, '1', 'au goût', noPortions)).toBe(0);
     });
 });
 

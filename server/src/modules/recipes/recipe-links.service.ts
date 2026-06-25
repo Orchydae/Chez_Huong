@@ -100,14 +100,48 @@ export class RecipeLinksService {
             orderBy: { createdAt: 'desc' },
         });
 
-        return {
-            outgoing: links.filter(
-                l => l.fromId === recipeId && l.to.status === RecipeStatus.PUBLISHED,
-            ),
-            incoming: links.filter(
-                l => l.toId === recipeId && l.from.status === RecipeStatus.PUBLISHED,
-            ),
+        const outgoing = links
+            .filter(l => l.fromId === recipeId && l.to.status === RecipeStatus.PUBLISHED)
+            .map(l => ({ ...l, derived: false }));
+        const incoming = links
+            .filter(l => l.toId === recipeId && l.from.status === RecipeStatus.PUBLISHED)
+            .map(l => ({ ...l, derived: false }));
+
+        // A recipe used AS an ingredient also surfaces here as an outgoing USES
+        // link, DERIVED from the ingredient rows (the single source of truth — no
+        // separate RecipeLink row to keep in sync). These have no link id and
+        // aren't individually deletable; they're managed via the ingredient.
+        const refRows = await this.prisma.recipeIngredient.findMany({
+            where: { section: { recipeId }, recipeRefId: { not: null } },
+            select: { recipeRef: { select: linkedRecipeSelect } },
+        });
+        const seen = new Set<number>(
+            outgoing.filter(l => l.kind === RecipeLinkKind.USES).map(l => l.toId),
+        );
+        type DerivedUse = {
+            id: number | null;
+            fromId: number;
+            toId: number;
+            kind: RecipeLinkKind;
+            derived: boolean;
+            to: Prisma.RecipeGetPayload<{ select: typeof linkedRecipeSelect }>;
         };
+        const derivedUses: DerivedUse[] = [];
+        for (const row of refRows) {
+            const ref = row.recipeRef;
+            if (!ref || ref.status !== RecipeStatus.PUBLISHED || seen.has(ref.id)) continue;
+            seen.add(ref.id);
+            derivedUses.push({
+                id: null as number | null,
+                fromId: recipeId,
+                toId: ref.id,
+                kind: RecipeLinkKind.USES,
+                derived: true,
+                to: ref,
+            });
+        }
+
+        return { outgoing: [...outgoing, ...derivedUses], incoming };
     }
 
     async remove(

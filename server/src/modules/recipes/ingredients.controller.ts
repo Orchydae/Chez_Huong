@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { IngredientsService } from './ingredients.service';
 import { ConfirmIngredientDto } from './dtos/confirm-ingredient.dto';
 import { UpsertIngredientTranslationDto } from './dtos/upsert-ingredient-translation.dto';
+import { UpsertIngredientPortionDto } from './dtos/upsert-ingredient-portion.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -34,11 +35,15 @@ export class IngredientsController {
         return { query: trimmed, count: matches.length, matches };
     }
 
-    /** Combined search — local first, USDA in parallel. */
+    /** Combined search — local catalogue + USDA + published recipes, in parallel. */
     @Get('search')
-    search(@Query('q') query: string) {
+    search(@Query('q') query: string, @Query('excludeRecipeId') excludeRecipeId?: string) {
         const trimmed = this.requireQuery(query);
-        return this.ingredients.searchIngredient(trimmed);
+        const exclude = excludeRecipeId ? Number(excludeRecipeId) : undefined;
+        return this.ingredients.searchIngredient(
+            trimmed,
+            Number.isInteger(exclude) ? exclude : undefined,
+        );
     }
 
     /** Promote a USDA match into a real Ingredient row (also stores nutrition + portions). */
@@ -83,6 +88,16 @@ export class IngredientsController {
         @Param('locale') locale: string,
     ) {
         return this.ingredients.removeTranslation(id, locale);
+    }
+
+    // ─── Portion weights (how much one count-based unit weighs) ───────
+
+    @Put(':id/portions')
+    upsertPortion(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpsertIngredientPortionDto,
+    ) {
+        return this.ingredients.upsertPortion(id, dto.unit, dto.gramWeight);
     }
 
     private requireQuery(query: string): string {

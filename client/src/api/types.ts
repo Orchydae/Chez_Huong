@@ -105,13 +105,30 @@ export interface Ingredient {
   translations?: IngredientTranslation[];
 }
 
-/** Note: nested `ingredient.name` — there is no flat ingredientName. */
+/** When a recipe is used AS an ingredient, the referenced recipe (clickable). */
+export interface RecipeRefBrief {
+  id: number;
+  title: string;
+  slug: string;
+  status: RecipeStatus;
+}
+
+/**
+ * One ingredient-list row. Its nutrition source is AT MOST one of: a catalogue
+ * `ingredient`, OR another recipe used as an ingredient (`recipeRef`, whose
+ * nutrition rolls up by servings), OR neither — a free-text row showing only
+ * `displayName`. Note: nested `ingredient.name` — there is no flat ingredientName.
+ */
 export interface RecipeIngredient {
+  id: number;
   sectionId: number;
-  ingredientId: number;
-  quantity: string; // supports fractions like "1/2"
+  ingredientId: number | null;
+  recipeRefId: number | null;
+  displayName: string | null;
+  quantity: string; // supports fractions like "1/2"; "" for "to taste"
   unit: string;
-  ingredient: Ingredient;
+  ingredient: Ingredient | null;
+  recipeRef: RecipeRefBrief | null;
 }
 
 export interface IngredientSection {
@@ -181,8 +198,16 @@ export interface Recipe {
 // No authorId: the server derives the author from the login token, and the
 // validation pipe rejects unknown fields with a 400.
 
+/**
+ * A row to save. Provide AT MOST one source: `ingredientId` (catalogue) or
+ * `recipeRefId` (a recipe used as an ingredient). `displayName` is an optional
+ * override / free-text name. The server is the single source of truth for the
+ * "exactly one source, or a name" rule — the client just sends what was picked.
+ */
 export interface RecipeIngredientPayload {
-  ingredientId: number;
+  ingredientId?: number;
+  recipeRefId?: number;
+  displayName?: string;
   quantity: string;
   unit: string;
 }
@@ -254,10 +279,19 @@ export interface UsdaMatch {
   name: string;
 }
 
+/** A published recipe selectable as a recipe-as-ingredient (nutrition rolls up). */
+export interface RecipeAsIngredientMatch {
+  id: number;
+  title: string;
+  slug: string;
+}
+
 export interface IngredientSearchResult {
   found: boolean;
   ingredients: Ingredient[];
   matches: UsdaMatch[];
+  /** Published recipes whose title matches — usable AS an ingredient. */
+  recipes: RecipeAsIngredientMatch[];
 }
 
 // ─── Social: likes & comments ──────────────────────────────────────────

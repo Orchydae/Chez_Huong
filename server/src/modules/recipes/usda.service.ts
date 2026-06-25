@@ -48,6 +48,21 @@ interface UsdaFoodResponse {
     householdServingFullText?: string;
 }
 
+/**
+ * USDA's gateway (nginx) returns 400 on un-encoded parentheses, and axios's
+ * default serializer leaves `(`/`)` literal — so a dataType filter like
+ * "Survey (FNDDS)" breaks EVERY search. URLSearchParams percent-encodes parens
+ * (and commas/spaces) strictly, which USDA accepts. Numbers are coerced to
+ * strings so `pageSize` serializes cleanly.
+ */
+function usdaParamsSerializer(params: Record<string, string | number | undefined>): string {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined) search.append(key, String(value));
+    }
+    return search.toString();
+}
+
 /** Extracts the bits we want to log from an axios error without spreading `any` through the codebase. */
 function describeAxiosError(error: unknown): { message: string; status?: number; data?: unknown } {
     if (typeof error !== 'object' || error === null) {
@@ -109,6 +124,9 @@ export class UsdaService {
                         // USDA accepts a comma-separated dataType filter on GET.
                         dataType: ALLOWED_DATA_TYPES.join(','),
                     },
+                    // strict encoding — "Survey (FNDDS)" has parens USDA's gateway
+                    // 400s on unless percent-encoded (see usdaParamsSerializer)
+                    paramsSerializer: usdaParamsSerializer,
                 },
             );
             if (!response.data.foods?.length) return [];
@@ -132,7 +150,7 @@ export class UsdaService {
         try {
             const response = await this.http.axiosRef.get<UsdaFoodResponse>(
                 `${this.baseUrl}/food/${fdcId}`,
-                { params: { api_key: this.apiKey, format: 'full' } },
+                { params: { api_key: this.apiKey, format: 'full' }, paramsSerializer: usdaParamsSerializer },
             );
             return this.mapNutrients(response.data.foodNutrients);
         } catch (error: unknown) {
@@ -146,7 +164,7 @@ export class UsdaService {
         try {
             const response = await this.http.axiosRef.get<UsdaFoodResponse>(
                 `${this.baseUrl}/food/${fdcId}`,
-                { params: { api_key: this.apiKey, format: 'full' } },
+                { params: { api_key: this.apiKey, format: 'full' }, paramsSerializer: usdaParamsSerializer },
             );
 
             const portions: UsdaPortionData[] = [];
@@ -209,6 +227,10 @@ export class UsdaService {
             liters: 'l', liter: 'l',
             'extra large': 'extra-large',
             'extra small': 'extra-small',
+            // keep count-based portion names aligned with the calculator's
+            // UNIT_ALIASES so a recipe unit of "pcs" matches stored "piece" data
+            pc: 'piece', pcs: 'piece', pieces: 'piece',
+            units: 'unit',
         };
         return aliases[normalized] || normalized;
     }

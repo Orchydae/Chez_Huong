@@ -55,6 +55,9 @@ export default function TranslateRecipePanel({ recipe }: { recipe: Recipe }) {
     for (const section of recipe.ingredientSections) {
       for (const row of section.ingredients) {
         const ing = row.ingredient;
+        // recipe-as-ingredient and free-text rows have no catalogue ingredient
+        // to translate — only real ingredients carry curated translations
+        if (!ing) continue;
         if (!map.has(ing.id)) {
           map.set(ing.id, {
             id: ing.id,

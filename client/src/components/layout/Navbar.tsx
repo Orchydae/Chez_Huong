@@ -203,7 +203,7 @@ export default function Navbar() {
           <div className="flex flex-col gap-4 border-t border-cream/10 px-6 py-4 sm:hidden">
             {searchForm}
             <div className="flex">
-              <LanguageSwitcher />
+              <LanguageSwitcher align="left" />
             </div>
             {user ? (
               <>

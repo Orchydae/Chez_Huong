@@ -212,7 +212,7 @@ export default function RecipePage() {
                 )}
                 <ul className="divide-y divide-forest/10">
                   {section.ingredients.map(row => (
-                    <li key={`${row.sectionId}-${row.ingredientId}`} className="text-sm">
+                    <li key={row.id} className="text-sm">
                       {/* check-as-you-cook: per-visit only, the label text names the box */}
                       {/* grid (auto checkbox + minmax(0,1fr) text) so a long
                           ingredient name wraps within the column instead of
@@ -223,9 +223,35 @@ export default function RecipePage() {
                           className="peer mt-0.5 size-4 accent-forest"
                         />
                         <span className="break-words transition peer-checked:line-through peer-checked:opacity-45">
-                          <span className="font-semibold">{row.quantity}</span>{' '}
+                          {row.quantity && (
+                            <>
+                              <span className="font-semibold">{row.quantity}</span>{' '}
+                            </>
+                          )}
                           <span className="text-forest/60">{row.unit}</span>{' '}
-                          {localizedName(row.ingredient, lang)}
+                          {/* a published recipe used as an ingredient links to
+                              that recipe; if it's since been unpublished we show
+                              its name without a (hidden, 404-ing) link; a
+                              catalogue ingredient shows its localized name; a
+                              free-text row shows its displayName */}
+                          {row.recipeRef?.status === 'PUBLISHED' ? (
+                            <Link
+                              to={`/recipes/${row.recipeRef.slug}`}
+                              className="font-medium text-coral underline-offset-2 hover:underline"
+                              onClick={e => e.stopPropagation()}
+                            >
+                              {row.recipeRef.title}
+                            </Link>
+                          ) : row.recipeRef ? (
+                            row.recipeRef.title
+                          ) : row.ingredient ? (
+                            // a per-recipe custom name wins over the catalogue/
+                            // translated name (nutrition still comes from the
+                            // linked ingredient)
+                            row.displayName?.trim() || localizedName(row.ingredient, lang)
+                          ) : (
+                            row.displayName
+                          )}
                         </span>
                       </label>
                     </li>
@@ -239,42 +265,53 @@ export default function RecipePage() {
 
           <section>
             <h2 className="mb-4 text-3xl">{t('recipe.steps')}</h2>
-            {recipe.stepSections.map((section, si) => (
-              <div key={section.id} className="mb-6">
-                {section.title && (
-                  <h3 className="mb-2 text-xl">
-                    {field(`stepSection.${si + 1}.title`, section.title)}
-                  </h3>
-                )}
-                <ol className="flex flex-col gap-4">
-                  {[...section.steps]
-                    .sort((a, b) => a.order - b.order)
-                    .map((step, sj) => (
-                      <li key={step.id} className="flex gap-3">
-                        <span className="font-serif text-2xl font-bold text-forest/30">
-                          {step.order}.
-                        </span>
-                        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-start">
-                          <p className="flex-1 text-sm leading-relaxed">
-                            {field(`stepSection.${si + 1}.step.${sj + 1}.description`, step.description)}
-                          </p>
-                          {step.mediaUrl && (
-                            <img
-                              src={step.mediaUrl}
-                              alt={t('recipe.stepImageAlt', { number: step.order })}
-                              loading="lazy"
-                              // reserve a 4:3 box on mobile (full-width, stacked)
-                              // so lazy loads don't shove the step text; desktop
-                              // keeps the natural-ratio w-44 thumbnail
-                              className="aspect-[4/3] w-full rounded-xl object-cover sm:aspect-auto sm:w-44"
-                            />
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                </ol>
-              </div>
-            ))}
+            {recipe.stepSections.map((section, si) => {
+              // Continuous step numbering across ALL sections (1, 2, 3…) instead
+              // of restarting at 1 in each — the recipe reads as one sequence.
+              // Offset = every step in the sections before this one.
+              const stepOffset = recipe.stepSections
+                .slice(0, si)
+                .reduce((sum, s) => sum + s.steps.length, 0);
+              return (
+                <div key={section.id} className="mb-6">
+                  {section.title && (
+                    <h3 className="mb-2 text-xl">
+                      {field(`stepSection.${si + 1}.title`, section.title)}
+                    </h3>
+                  )}
+                  <ol className="flex flex-col gap-4">
+                    {[...section.steps]
+                      .sort((a, b) => a.order - b.order)
+                      .map((step, sj) => {
+                        const number = stepOffset + sj + 1;
+                        return (
+                          <li key={step.id} className="flex gap-3">
+                            <span className="font-serif text-2xl font-bold text-forest/30">
+                              {number}.
+                            </span>
+                            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-start">
+                              <p className="flex-1 text-sm leading-relaxed">
+                                {field(`stepSection.${si + 1}.step.${sj + 1}.description`, step.description)}
+                              </p>
+                              {step.mediaUrl && (
+                                <img
+                                  src={step.mediaUrl}
+                                  alt={t('recipe.stepImageAlt', { number })}
+                                  loading="lazy"
+                                  // reserve a 4:3 box on mobile (full-width, stacked)
+                                  // so lazy loads don't shove the step text; desktop
+                                  // keeps the natural-ratio w-44 thumbnail
+                                  className="aspect-[4/3] w-full rounded-xl object-cover sm:aspect-auto sm:w-44"
+                                />
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                  </ol>
+                </div>
+              );
+            })}
           </section>
         </div>
 

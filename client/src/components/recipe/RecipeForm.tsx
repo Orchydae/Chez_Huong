@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Camera, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { Camera, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type {
   Difficulty,
@@ -15,9 +15,13 @@ import {
   RECIPE_TYPE_VALUES,
 } from '../../api/types';
 import { uploadImage } from '../../api/recipes.api';
+import { upsertIngredientPortion } from '../../api/ingredients.api';
 import { ApiError } from '../../api/client';
 import { toast } from '../../lib/toast';
+import { CONTENT_LANGUAGES } from '../../lib/language';
+import { unitNeedsWeight } from '../../lib/units';
 import IngredientAutocomplete from './IngredientAutocomplete';
+import UnitAutocomplete from './UnitAutocomplete';
 import Button from '../ui/Button';
 import Spinner from '../ui/Spinner';
 
@@ -39,12 +43,34 @@ interface RecipeFormProps {
 let rowSeq = 0;
 const newRowId = () => ++rowSeq;
 
+/** Return a copy of `arr` with the item at `index` shifted by `delta` (±1).
+ *  Out-of-range moves return the array unchanged. */
+function withMoved<T>(arr: T[], index: number, delta: number): T[] {
+  const target = index + delta;
+  if (index < 0 || index >= arr.length || target < 0 || target >= arr.length) return arr;
+  const next = [...arr];
+  const [item] = next.splice(index, 1);
+  next.splice(target, 0, item);
+  return next;
+}
+
 interface IngredientRowForm {
   rowId: number;
+  // a row points at AT MOST one source: a catalogue ingredient OR another recipe
+  // used as an ingredient. Both null = nothing picked yet (the server 400s).
   ingredientId: number | null;
+  recipeRefId: number | null;
   name: string;
+  // optional per-recipe display override for a PICKED catalogue ingredient: keep
+  // the USDA nutrition (ingredientId) but show your own name — e.g. pick
+  // "Cucumber, with peel, raw" then display "concombre anglais". Blank = show the
+  // catalogue/translated name. Saved as the row's displayName.
+  displayName: string;
   quantity: string;
   unit: string;
+  // optional "1 unit = N g" the author sets for count-based units (pcs, slice…)
+  // so they count toward nutrition; saved as an IngredientPortion on submit.
+  gramsPerUnit: string;
 }
 
 interface IngredientSectionForm {
@@ -56,7 +82,7 @@ interface IngredientSectionForm {
 interface StepRowForm {
   rowId: number;
   description: string;
-  mediaUrl: string | null; // already-hosted image (edit mode)
+  mediaUrl: string; // hosted/pasted image URL — existing, or a link typed in
   mediaFile: File | null; // newly picked file, uploaded on submit
   mediaPreview: string | null;
 }
@@ -70,9 +96,12 @@ interface StepSectionForm {
 const emptyIngredientRow = (): IngredientRowForm => ({
   rowId: newRowId(),
   ingredientId: null,
+  recipeRefId: null,
   name: '',
+  displayName: '',
   quantity: '',
   unit: '',
+  gramsPerUnit: '',
 });
 const emptyIngredientSection = (): IngredientSectionForm => ({
   rowId: newRowId(),
@@ -82,7 +111,7 @@ const emptyIngredientSection = (): IngredientSectionForm => ({
 const emptyStepRow = (): StepRowForm => ({
   rowId: newRowId(),
   description: '',
-  mediaUrl: null,
+  mediaUrl: '',
   mediaFile: null,
   mediaPreview: null,
 });
@@ -103,9 +132,18 @@ function sectionsFromRecipe(recipe: Recipe): {
       ingredients: section.ingredients.map(row => ({
         rowId: newRowId(),
         ingredientId: row.ingredientId,
-        name: row.ingredient.name,
+        recipeRefId: row.recipeRefId,
+        // the autocomplete shows what's LINKED (catalogue ingredient name or the
+        // referenced recipe's title); for a free-text row the typed name lives in
+        // displayName, so fall back to it
+        name: row.ingredient?.name ?? row.recipeRef?.title ?? row.displayName ?? '',
+        // the custom-name override field, shown only for a picked catalogue
+        // ingredient. Free-text rows keep their name above, not here.
+        displayName: row.ingredientId != null ? (row.displayName ?? '') : '',
         quantity: row.quantity,
         unit: row.unit,
+        // left blank on load: it's a set-or-update override, not the live value
+        gramsPerUnit: '',
       })),
     })),
     steps: recipe.stepSections.map(section => ({
@@ -116,7 +154,7 @@ function sectionsFromRecipe(recipe: Recipe): {
         .map(step => ({
           rowId: newRowId(),
           description: step.description,
-          mediaUrl: step.mediaUrl,
+          mediaUrl: step.mediaUrl ?? '',
           mediaFile: null,
           mediaPreview: step.mediaUrl,
         })),
@@ -131,15 +169,19 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
   /* ── scalar fields ──────────────────────────────────────────────── */
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
-  const [locale, setLocale] = useState(initial?.locale ?? 'vi');
-  const [prepTime, setPrepTime] = useState(initial?.prepTime ?? 0);
+  const [locale, setLocale] = useState(initial?.locale ?? 'fr');
+  // Numbers are held as strings so the box can be emptied while editing and a
+  // stray leading zero doesn't stick (typing "5" over the initial "0" must read
+  // 5, not "05"). Parsed back to numbers at submit; the server DTO is still the
+  // single source of truth for the allowed range.
+  const [prepTime, setPrepTime] = useState(initial ? String(initial.prepTime) : '');
   const [prepTimeUnit, setPrepTimeUnit] = useState<TimeUnit>(initial?.prepTimeUnit ?? 'MINUTES');
-  const [cookTime, setCookTime] = useState(initial?.cookTime ?? 0);
+  const [cookTime, setCookTime] = useState(initial ? String(initial.cookTime) : '');
   const [cookTimeUnit, setCookTimeUnit] = useState<TimeUnit>(initial?.cookTimeUnit ?? 'MINUTES');
   const [difficulty, setDifficulty] = useState<Difficulty>(initial?.difficulty ?? 'EASY');
   const [recipeType, setRecipeType] = useState<RecipeType>(initial?.type ?? 'MAIN');
   const [cuisine, setCuisine] = useState(initial?.cuisine ?? 'Viêt Nam');
-  const [servings, setServings] = useState(initial?.servings ?? 4);
+  const [servings, setServings] = useState(initial ? String(initial.servings) : '4');
   const [recipeYield, setRecipeYield] = useState(initial?.yield ?? '');
   const [particularities, setParticularities] = useState<ParticularityType[]>(
     initial?.particularities.map(p => p.type) ?? [],
@@ -159,6 +201,9 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initial?.imageUrl ?? null);
+  // a link the author pasted instead of uploading — prefilled with the existing
+  // URL so an edit shows (and can change) it. Used directly as imageUrl on save.
+  const [imageUrlInput, setImageUrlInput] = useState(initial?.imageUrl ?? '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* ── sections ───────────────────────────────────────────────────── */
@@ -169,6 +214,13 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
     initialSections?.steps ?? [emptyStepSection()],
   );
   const [submitting, setSubmitting] = useState(false);
+  // Dotted field paths the server flagged on the last failed save (e.g.
+  // "ingredientSections.0.ingredients.2.unit"). The form owns no validation
+  // rules — it just highlights whatever the server reported. `hasError` matches
+  // a path or any field beneath it, so a row prefix catches its field errors.
+  const [errorPaths, setErrorPaths] = useState<readonly string[]>([]);
+  const hasError = (prefix: string) =>
+    errorPaths.some(p => p === prefix || p.startsWith(`${prefix}.`));
 
   /* All updates are functional (built from `prev`, never from a render-
      captured array) and target rows by rowId, so a click can never clobber
@@ -228,20 +280,76 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
       ),
     );
 
+  /* ── reordering (up/down) ──────────────────────────────────────────
+     The saved order follows the array order: on save, child rows are wiped and
+     recreated in this order, so the server's id/order sequence — and thus what
+     readers see — matches. delta is -1 (up) or +1 (down). */
+  const moveIngredientSection = (sectionId: number, delta: number) =>
+    setIngredientSections(prev => withMoved(prev, prev.findIndex(s => s.rowId === sectionId), delta));
+
+  const moveIngredientRow = (sectionId: number, rowId: number, delta: number) =>
+    setIngredientSections(prev =>
+      prev.map(s =>
+        s.rowId === sectionId
+          ? { ...s, ingredients: withMoved(s.ingredients, s.ingredients.findIndex(r => r.rowId === rowId), delta) }
+          : s,
+      ),
+    );
+
+  const moveStepSection = (sectionId: number, delta: number) =>
+    setStepSections(prev => withMoved(prev, prev.findIndex(s => s.rowId === sectionId), delta));
+
+  const moveStepRow = (sectionId: number, rowId: number, delta: number) =>
+    setStepSections(prev =>
+      prev.map(s =>
+        s.rowId === sectionId
+          ? { ...s, steps: withMoved(s.steps, s.steps.findIndex(r => r.rowId === rowId), delta) }
+          : s,
+      ),
+    );
+
   async function handleSubmit(intent: SubmitIntent) {
     setSubmitting(true);
+    setErrorPaths([]); // clear last attempt's highlights
     try {
-      // hero image: upload the newly picked file, else keep the existing URL
-      let imageUrl = initial?.imageUrl ?? null;
-      if (imageFile) imageUrl = await uploadImage(imageFile);
+      // hero image: a newly picked file is uploaded; otherwise use the pasted
+      // (or existing) link as-is, so an author can point at an external image
+      const imageUrl = imageFile ? await uploadImage(imageFile) : imageUrlInput.trim() || null;
+
+      // Persist any author-set "1 unit = N g" weights so count-based units
+      // (pcs, slice…) contribute to nutrition. Dedupe by ingredient+unit so two
+      // rows of the same thing don't double-write (last one wins).
+      const portionWeights = new Map<
+        string,
+        { ingredientId: number; unit: string; gramWeight: number }
+      >();
+      for (const section of ingredientSections) {
+        for (const row of section.ingredients) {
+          const grams = Number(row.gramsPerUnit);
+          const unit = row.unit.trim();
+          if (row.ingredientId === null || !unit || !(grams > 0)) continue;
+          portionWeights.set(`${row.ingredientId}:${unit.toLowerCase()}`, {
+            ingredientId: row.ingredientId,
+            unit,
+            gramWeight: grams,
+          });
+        }
+      }
+      await Promise.all(
+        [...portionWeights.values()].map(p =>
+          upsertIngredientPortion(p.ingredientId, p.unit, p.gramWeight),
+        ),
+      );
 
       const stepSectionsPayload = await Promise.all(
         stepSections.map(async section => ({
           title: section.title.trim(),
           steps: await Promise.all(
             section.steps.map(async (step, index) => {
-              let mediaUrl = step.mediaUrl ?? undefined;
-              if (step.mediaFile) mediaUrl = await uploadImage(step.mediaFile);
+              // same rule per step: upload a picked file, else keep the link
+              const mediaUrl = step.mediaFile
+                ? await uploadImage(step.mediaFile)
+                : step.mediaUrl.trim() || undefined;
               return {
                 order: index + 1,
                 description: step.description.trim(),
@@ -256,23 +364,35 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
         title: title.trim(),
         description: description.trim() || null,
         locale,
-        prepTime,
+        // empty box → 0 (prep/cook) / 1 (servings); the server validates the rest
+        prepTime: Number(prepTime) || 0,
         prepTimeUnit,
-        cookTime,
+        cookTime: Number(cookTime) || 0,
         cookTimeUnit,
         difficulty,
         type: recipeType,
         cuisine: cuisine.trim(),
-        servings,
+        servings: Number(servings) || 1,
         imageUrl,
         ...(recipeYield.trim() ? { yield: recipeYield.trim() } : {}),
         ...(particularities.length > 0 ? { particularities } : {}),
         ingredientSections: ingredientSections.map(section => ({
           name: section.name.trim(),
           ingredients: section.ingredients.map(row => ({
-            // null when no catalogue pick was confirmed — the server's 400
-            // is the single source of truth for that rule (no client mirror)
-            ingredientId: row.ingredientId as number,
+            // exactly one source per row: a recipe-as-ingredient (recipeRefId), a
+            // catalogue ingredient (ingredientId), or — when neither was picked —
+            // a free-text name (displayName), which carries no nutrition and isn't
+            // stored in the catalogue. The server validates the rule.
+            ...(row.recipeRefId != null
+              ? { recipeRefId: row.recipeRefId }
+              : row.ingredientId != null
+                ? {
+                    ingredientId: row.ingredientId,
+                    // a catalogue ingredient keeps its nutrition but can show a
+                    // custom name; omit when blank so the catalogue name shows
+                    ...(row.displayName.trim() ? { displayName: row.displayName.trim() } : {}),
+                  }
+                : { displayName: row.name.trim() }),
             quantity: row.quantity.trim(),
             unit: row.unit.trim(),
           })),
@@ -285,7 +405,17 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
       // server text is English — map to localized messages (rule: all visible
       // text via i18n); the raw message stays available in the console
       console.error(err);
-      if (err instanceof ApiError && err.status === 403) {
+      if (err instanceof ApiError && err.status === 400 && err.fields && err.fields.length > 0) {
+        // server told us exactly which rows/fields failed — highlight them and
+        // scroll to the first, instead of a vague form-wide error
+        setErrorPaths(err.fields);
+        toast.error(t('form.errorRowsIncomplete'));
+        requestAnimationFrame(() => {
+          document
+            .querySelector('[data-field-error="true"]')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      } else if (err instanceof ApiError && err.status === 403) {
         toast.error(t('common.errorForbidden'));
       } else if (err instanceof ApiError && err.status === 400) {
         toast.error(t('form.errorValidation'));
@@ -304,6 +434,13 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
   const selectClass =
     'rounded-lg border border-forest/20 bg-white px-3 py-2 text-base outline-none focus:border-forest sm:text-sm';
   const inputClass = selectClass;
+
+  // Number field onChange: keep the raw text (so it can be cleared) but strip a
+  // leading zero by round-tripping through Number — typing over the initial "0"
+  // reads as the new digit, never "0…".
+  const onNumberChange =
+    (set: (value: string) => void) => (e: ChangeEvent<HTMLInputElement>) =>
+      set(e.target.value === '' ? '' : String(Number(e.target.value)));
 
   return (
     <div className="flex flex-col">
@@ -329,17 +466,35 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
             if (!file) return;
             setImageFile(file);
             setImagePreview(trackBlobUrl(file));
+            setImageUrlInput(''); // a picked file replaces any pasted link
           }}
         />
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-12 sm:px-6 sm:py-16">
-          <button
-            type="button"
-            className="flex w-fit items-center gap-2 rounded-full border border-cream/40 px-4 py-2 text-sm transition hover:bg-cream/10"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Camera size={18} />
-            {imagePreview ? t('form.changePhoto') : t('form.addPhoto')}
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              className="flex w-fit items-center gap-2 rounded-full border border-cream/40 px-4 py-2 text-sm transition hover:bg-cream/10"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera size={18} />
+              {imagePreview ? t('form.changePhoto') : t('form.addPhoto')}
+            </button>
+            {/* …or point at an image that already lives on the web — used as-is,
+                no upload. Typing here clears a picked file (mutually exclusive). */}
+            <input
+              type="url"
+              inputMode="url"
+              className="w-full max-w-md rounded-full bg-white/15 px-4 py-1.5 text-base text-cream outline-none backdrop-blur-sm placeholder:text-cream/50 focus:bg-white/25 sm:text-sm"
+              placeholder={t('form.imageUrlPlaceholder')}
+              value={imageUrlInput}
+              onChange={e => {
+                const url = e.target.value;
+                setImageUrlInput(url);
+                setImageFile(null);
+                setImagePreview(url.trim() || null);
+              }}
+            />
+          </div>
 
           {/* text-base below sm so the two selects (font: inherit) don't trigger
               iOS focus-zoom; sm:text-sm keeps today's desktop size */}
@@ -350,9 +505,11 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
               value={locale}
               onChange={e => setLocale(e.target.value)}
             >
-              <option value="vi">Tiếng Việt</option>
-              <option value="fr">Français</option>
-              <option value="en">English</option>
+              {CONTENT_LANGUAGES.map(code => (
+                <option key={code} value={code}>
+                  {t(`language.${code}`)}
+                </option>
+              ))}
             </select>
             <select
               className="rounded-full bg-white/15 px-3 py-1.5 text-cream backdrop-blur-sm [&>option]:text-forest"
@@ -368,7 +525,10 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
           </div>
 
           <input
-            className="w-full max-w-3xl border-b border-cream/30 bg-transparent font-serif text-4xl font-bold outline-none placeholder:text-cream/40 focus:border-cream sm:text-5xl"
+            data-field-error={hasError('title') ? 'true' : undefined}
+            className={`w-full max-w-3xl border-b bg-transparent font-serif text-4xl font-bold outline-none placeholder:text-cream/40 sm:text-5xl ${
+              hasError('title') ? 'border-coral' : 'border-cream/30 focus:border-cream'
+            }`}
             placeholder={t('form.titlePlaceholder')}
             value={title}
             onChange={e => setTitle(e.target.value)}
@@ -393,7 +553,7 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
               type="number"
               min={1}
               value={servings}
-              onChange={e => setServings(Math.max(1, Number(e.target.value)))}
+              onChange={onNumberChange(setServings)}
             />
           </FormStat>
           <FormStat label={t('recipe.prepTime')}>
@@ -403,7 +563,7 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
                 type="number"
                 min={0}
                 value={prepTime}
-                onChange={e => setPrepTime(Math.max(0, Number(e.target.value)))}
+                onChange={onNumberChange(setPrepTime)}
               />
               <select
                 className={selectClass}
@@ -422,7 +582,7 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
                 type="number"
                 min={0}
                 value={cookTime}
-                onChange={e => setCookTime(Math.max(0, Number(e.target.value)))}
+                onChange={onNumberChange(setCookTime)}
               />
               <select
                 className={selectClass}
@@ -504,63 +664,159 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
           {/* ingredients */}
           <section>
             <h2 className="mb-4 text-3xl">{t('recipe.ingredients')}</h2>
-            {ingredientSections.map(section => (
+            {ingredientSections.map((section, si) => (
               <div key={section.rowId} className="mb-6 rounded-xl bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
                   <input
-                    className={`${inputClass} flex-1`}
+                    data-field-error={hasError(`ingredientSections.${si}.name`) ? 'true' : undefined}
+                    className={`${inputClass} flex-1 ${
+                      hasError(`ingredientSections.${si}.name`) ? 'border-coral ring-1 ring-coral' : ''
+                    }`}
                     placeholder={t('form.ingredientSectionPlaceholder')}
                     value={section.name}
                     onChange={e => patchIngredientSection(section.rowId, { name: e.target.value })}
                   />
                   {ingredientSections.length > 1 && (
-                    <IconButton
-                      label={t('form.removeSection')}
-                      onClick={() =>
-                        setIngredientSections(prev => prev.filter(s => s.rowId !== section.rowId))
-                      }
-                    />
+                    <>
+                      <ReorderButtons
+                        upLabel={t('form.moveSectionUp')}
+                        downLabel={t('form.moveSectionDown')}
+                        canUp={si > 0}
+                        canDown={si < ingredientSections.length - 1}
+                        onUp={() => moveIngredientSection(section.rowId, -1)}
+                        onDown={() => moveIngredientSection(section.rowId, 1)}
+                      />
+                      <IconButton
+                        label={t('form.removeSection')}
+                        onClick={() =>
+                          setIngredientSections(prev => prev.filter(s => s.rowId !== section.rowId))
+                        }
+                      />
+                    </>
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  {section.ingredients.map(row => (
-                    // flex-wrap + the name field's min basis let it drop to its
-                    // own full-width line at ~360px instead of forcing the row
-                    // (and the page) into horizontal scroll
-                    <div key={row.rowId} className="flex flex-wrap items-start gap-2">
-                      <input
-                        className={`${inputClass} w-16`}
-                        placeholder={t('form.quantityPlaceholder')}
-                        value={row.quantity}
-                        onChange={e =>
-                          patchIngredientRow(section.rowId, row.rowId, { quantity: e.target.value })
-                        }
-                      />
-                      <input
-                        className={`${inputClass} w-20`}
-                        placeholder={t('form.unitPlaceholder')}
-                        value={row.unit}
-                        onChange={e =>
-                          patchIngredientRow(section.rowId, row.rowId, { unit: e.target.value })
-                        }
-                      />
-                      <IngredientAutocomplete
-                        name={row.name}
-                        onType={name =>
-                          // typing invalidates the previous match until a pick
-                          patchIngredientRow(section.rowId, row.rowId, { name, ingredientId: null })
-                        }
-                        onSelect={(ingredientId, name) =>
-                          // rowId identity: an async USDA confirm always lands
-                          // on the row that initiated it (or nowhere)
-                          patchIngredientRow(section.rowId, row.rowId, { ingredientId, name })
-                        }
-                      />
-                      {section.ingredients.length > 1 && (
-                        <IconButton
-                          label={t('form.removeRow')}
-                          onClick={() => removeIngredientRow(section.rowId, row.rowId)}
+                  {section.ingredients.map((row, ri) => (
+                    <div
+                      key={row.rowId}
+                      data-field-error={
+                        hasError(`ingredientSections.${si}.ingredients.${ri}`) ? 'true' : undefined
+                      }
+                      className={`flex flex-col gap-1.5 ${
+                        hasError(`ingredientSections.${si}.ingredients.${ri}`)
+                          ? 'rounded-lg border-l-2 border-coral bg-coral/5 py-1.5 pl-2'
+                          : ''
+                      }`}
+                    >
+                      {/* flex-wrap + the name field's min basis let it drop to
+                          its own full-width line at ~360px instead of forcing
+                          the row (and the page) into horizontal scroll */}
+                      <div className="flex flex-wrap items-start gap-2">
+                        <input
+                          className={`${inputClass} w-16`}
+                          placeholder={t('form.quantityPlaceholder')}
+                          value={row.quantity}
+                          onChange={e =>
+                            patchIngredientRow(section.rowId, row.rowId, { quantity: e.target.value })
+                          }
                         />
+                        <UnitAutocomplete
+                          value={row.unit}
+                          inputClassName={inputClass}
+                          onChange={unit =>
+                            patchIngredientRow(section.rowId, row.rowId, { unit })
+                          }
+                        />
+                        <IngredientAutocomplete
+                          name={row.name}
+                          excludeRecipeId={initial?.id}
+                          onType={name =>
+                            // typing invalidates any previous pick (ingredient or
+                            // recipe) until a new one is made
+                            patchIngredientRow(section.rowId, row.rowId, {
+                              name,
+                              ingredientId: null,
+                              recipeRefId: null,
+                            })
+                          }
+                          onSelect={pick =>
+                            // rowId identity: an async USDA confirm always lands
+                            // on the row that initiated it (or nowhere). Each pick
+                            // sets exactly one source and clears the others, so a
+                            // row never carries more than one. A free-text pick
+                            // clears both ids → saved as displayName, no nutrition.
+                            patchIngredientRow(
+                              section.rowId,
+                              row.rowId,
+                              pick.type === 'recipe'
+                                ? { recipeRefId: pick.recipeRefId, ingredientId: null, name: pick.name }
+                                : pick.type === 'ingredient'
+                                  ? { ingredientId: pick.ingredientId, recipeRefId: null, name: pick.name }
+                                  : { ingredientId: null, recipeRefId: null, name: pick.name },
+                            )
+                          }
+                        />
+                        {section.ingredients.length > 1 && (
+                          <>
+                            <ReorderButtons
+                              upLabel={t('form.moveUp')}
+                              downLabel={t('form.moveDown')}
+                              canUp={ri > 0}
+                              canDown={ri < section.ingredients.length - 1}
+                              onUp={() => moveIngredientRow(section.rowId, row.rowId, -1)}
+                              onDown={() => moveIngredientRow(section.rowId, row.rowId, 1)}
+                            />
+                            <IconButton
+                              label={t('form.removeRow')}
+                              onClick={() => removeIngredientRow(section.rowId, row.rowId)}
+                            />
+                          </>
+                        )}
+                      </div>
+                      {/* Picked catalogue ingredient: keep its USDA nutrition but
+                          optionally show a custom name on the recipe (e.g. pick
+                          "Cucumber, with peel, raw" → display "concombre"). Blank
+                          shows the catalogue/translated name (the placeholder). */}
+                      {row.ingredientId !== null && (
+                        <label className="flex flex-wrap items-center gap-2 pl-1 text-xs text-forest/60">
+                          {t('form.displayNameLabel')}
+                          <input
+                            type="text"
+                            className={`${inputClass} min-w-0 flex-1`}
+                            placeholder={row.name || t('form.displayNamePlaceholder')}
+                            value={row.displayName}
+                            onChange={e =>
+                              patchIngredientRow(section.rowId, row.rowId, {
+                                displayName: e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                      )}
+                      {/* Count-based unit (pcs, slice…) on a chosen ingredient:
+                          offer its gram weight so it counts toward nutrition.
+                          Optional — blank just leaves any saved weight as-is. */}
+                      {row.ingredientId !== null && unitNeedsWeight(row.unit) && (
+                        <label className="flex flex-wrap items-center gap-2 pl-1 text-xs text-forest/60">
+                          {t('form.gramsPerUnitLabel', { unit: row.unit.trim() })}
+                          <input
+                            type="number"
+                            min={0}
+                            inputMode="decimal"
+                            className={`${inputClass} w-24`}
+                            placeholder={t('form.gramsPerUnitPlaceholder')}
+                            value={row.gramsPerUnit}
+                            onChange={onNumberChange(value =>
+                              patchIngredientRow(section.rowId, row.rowId, { gramsPerUnit: value }),
+                            )}
+                          />
+                          {t('unit.g')}
+                        </label>
+                      )}
+                      {hasError(`ingredientSections.${si}.ingredients.${ri}`) && (
+                        <p className="pl-1 text-xs font-medium text-coral">
+                          {t('form.errorFieldRequired')}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -580,71 +836,132 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
           {/* steps */}
           <section>
             <h2 className="mb-4 text-3xl">{t('recipe.steps')}</h2>
-            {stepSections.map(section => (
+            {stepSections.map((section, si) => (
               <div key={section.rowId} className="mb-6 rounded-xl bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
                   <input
-                    className={`${inputClass} flex-1`}
+                    data-field-error={hasError(`stepSections.${si}.title`) ? 'true' : undefined}
+                    className={`${inputClass} flex-1 ${
+                      hasError(`stepSections.${si}.title`) ? 'border-coral ring-1 ring-coral' : ''
+                    }`}
                     placeholder={t('form.stepSectionPlaceholder')}
                     value={section.title}
                     onChange={e => patchStepSection(section.rowId, { title: e.target.value })}
                   />
                   {stepSections.length > 1 && (
-                    <IconButton
-                      label={t('form.removeSection')}
-                      onClick={() =>
-                        setStepSections(prev => prev.filter(s => s.rowId !== section.rowId))
-                      }
-                    />
+                    <>
+                      <ReorderButtons
+                        upLabel={t('form.moveSectionUp')}
+                        downLabel={t('form.moveSectionDown')}
+                        canUp={si > 0}
+                        canDown={si < stepSections.length - 1}
+                        onUp={() => moveStepSection(section.rowId, -1)}
+                        onDown={() => moveStepSection(section.rowId, 1)}
+                      />
+                      <IconButton
+                        label={t('form.removeSection')}
+                        onClick={() =>
+                          setStepSections(prev => prev.filter(s => s.rowId !== section.rowId))
+                        }
+                      />
+                    </>
                   )}
                 </div>
                 <div className="flex flex-col gap-4">
                   {section.steps.map((step, index) => (
-                    <div key={step.rowId} className="flex items-start gap-3">
+                    <div
+                      key={step.rowId}
+                      data-field-error={
+                        hasError(`stepSections.${si}.steps.${index}`) ? 'true' : undefined
+                      }
+                      className={`flex items-start gap-3 ${
+                        hasError(`stepSections.${si}.steps.${index}`)
+                          ? 'rounded-lg border-l-2 border-coral bg-coral/5 py-1.5 pl-2'
+                          : ''
+                      }`}
+                    >
                       <span className="pt-2 font-serif text-xl font-bold text-forest/30">
-                        {index + 1}.
+                        {/* continuous numbering across sections, matching the
+                            published recipe (offset by earlier sections' steps) */}
+                        {stepSections.slice(0, si).reduce((n, s) => n + s.steps.length, 0) + index + 1}.
                       </span>
-                      <textarea
-                        className={`${inputClass} min-w-0 flex-1`}
-                        rows={3}
-                        placeholder={t('form.stepPlaceholder')}
-                        value={step.description}
-                        onChange={e =>
-                          patchStepRow(section.rowId, step.rowId, { description: e.target.value })
-                        }
-                      />
-                      <label
-                        className={`flex h-20 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-forest/30 bg-cover bg-center text-xs text-forest/60 transition hover:border-forest ${
-                          step.mediaPreview ? 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]' : ''
-                        }`}
-                        style={
-                          step.mediaPreview
-                            ? { backgroundImage: `url(${step.mediaPreview})` }
-                            : undefined
-                        }
-                      >
+                      <div className="flex min-w-0 flex-1 flex-col gap-2">
+                        <div className="flex items-start gap-3">
+                          <textarea
+                            className={`${inputClass} min-w-0 flex-1`}
+                            rows={3}
+                            placeholder={t('form.stepPlaceholder')}
+                            value={step.description}
+                            onChange={e =>
+                              patchStepRow(section.rowId, step.rowId, { description: e.target.value })
+                            }
+                          />
+                          <label
+                            className={`flex h-20 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-forest/30 bg-cover bg-center text-xs text-forest/60 transition hover:border-forest ${
+                              step.mediaPreview ? 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]' : ''
+                            }`}
+                            style={
+                              step.mediaPreview
+                                ? { backgroundImage: `url(${step.mediaPreview})` }
+                                : undefined
+                            }
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                e.target.value = ''; // same-file re-pick must fire again
+                                if (!file) return;
+                                patchStepRow(section.rowId, step.rowId, {
+                                  mediaFile: file,
+                                  mediaPreview: trackBlobUrl(file),
+                                  mediaUrl: '', // a picked file replaces any pasted link
+                                });
+                              }}
+                            />
+                            {!step.mediaPreview && <Camera size={16} />}
+                            {step.mediaPreview ? t('form.change') : t('form.photo')}
+                          </label>
+                        </div>
+                        {/* …or paste a link to an image already on the web (used as-is) */}
                         <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
+                          type="url"
+                          inputMode="url"
+                          className={`${inputClass} w-full`}
+                          placeholder={t('form.stepImageUrlPlaceholder')}
+                          value={step.mediaUrl}
                           onChange={e => {
-                            const file = e.target.files?.[0];
-                            e.target.value = ''; // same-file re-pick must fire again
-                            if (!file) return;
+                            const url = e.target.value;
                             patchStepRow(section.rowId, step.rowId, {
-                              mediaFile: file,
-                              mediaPreview: trackBlobUrl(file),
+                              mediaUrl: url,
+                              mediaFile: null,
+                              mediaPreview: url.trim() || null,
                             });
                           }}
                         />
-                        {!step.mediaPreview && <Camera size={16} />}
-                        {step.mediaPreview ? t('form.change') : t('form.photo')}
-                      </label>
+                        {hasError(`stepSections.${si}.steps.${index}`) && (
+                          <p className="text-xs font-medium text-coral">
+                            {t('form.errorFieldRequired')}
+                          </p>
+                        )}
+                      </div>
                       {section.steps.length > 1 && (
-                        <IconButton
-                          label={t('form.removeRow')}
-                          onClick={() => removeStepRow(section.rowId, step.rowId)}
-                        />
+                        <>
+                          <ReorderButtons
+                            upLabel={t('form.moveUp')}
+                            downLabel={t('form.moveDown')}
+                            canUp={index > 0}
+                            canDown={index < section.steps.length - 1}
+                            onUp={() => moveStepRow(section.rowId, step.rowId, -1)}
+                            onDown={() => moveStepRow(section.rowId, step.rowId, 1)}
+                          />
+                          <IconButton
+                            label={t('form.removeRow')}
+                            onClick={() => removeStepRow(section.rowId, step.rowId)}
+                          />
+                        </>
                       )}
                     </div>
                   ))}
@@ -716,6 +1033,36 @@ function IconButton({ label, onClick }: { label: string; onClick: () => void }) 
     >
       <Trash2 size={15} />
     </button>
+  );
+}
+
+/** Stacked up/down arrows for reordering a row or section. Each arrow disables
+ *  itself at the end it can't move toward. */
+function ReorderButtons({
+  onUp,
+  onDown,
+  canUp,
+  canDown,
+  upLabel,
+  downLabel,
+}: {
+  onUp: () => void;
+  onDown: () => void;
+  canUp: boolean;
+  canDown: boolean;
+  upLabel: string;
+  downLabel: string;
+}) {
+  const btn = 'rounded p-0.5 text-forest/40 transition enabled:hover:text-forest disabled:opacity-20';
+  return (
+    <div className="mt-1 flex shrink-0 flex-col">
+      <button type="button" aria-label={upLabel} className={btn} disabled={!canUp} onClick={onUp}>
+        <ChevronUp size={16} />
+      </button>
+      <button type="button" aria-label={downLabel} className={btn} disabled={!canDown} onClick={onDown}>
+        <ChevronDown size={16} />
+      </button>
+    </div>
   );
 }
 

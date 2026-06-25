@@ -31,11 +31,18 @@ export function clearToken(): void {
 /** Normalized server error: status + a single human-readable message. */
 export class ApiError extends Error {
   readonly status: number;
+  /**
+   * Dotted field paths the server flagged on a 400 (e.g.
+   * `ingredientSections.0.ingredients.2.unit`). Lets a form point the user at
+   * the exact row/field that failed. Absent when the error isn't field-scoped.
+   */
+  readonly fields?: string[];
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, fields?: string[]) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.fields = fields;
   }
 }
 
@@ -80,25 +87,39 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, await extractMessage(res));
+    const { message, fields } = await extractError(res);
+    throw new ApiError(res.status, message, fields);
   }
 
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
-/** NestJS errors carry { message: string | string[] }; collapse to one string. */
-async function extractMessage(res: Response): Promise<string> {
+/**
+ * NestJS errors carry { message: string | string[] } and, for validation 400s,
+ * a { fields: string[] } of the offending dotted paths. Collapse the message to
+ * one string and pass the field paths through so callers can map them to rows.
+ */
+async function extractError(res: Response): Promise<{ message: string; fields?: string[] }> {
   try {
     const data: unknown = await res.json();
-    if (data && typeof data === 'object' && 'message' in data) {
-      const message = (data as { message: string | string[] }).message;
-      return Array.isArray(message) ? message.join(' · ') : message;
+    if (data && typeof data === 'object') {
+      const obj = data as { message?: string | string[]; fields?: unknown };
+      const message =
+        obj.message == null
+          ? `HTTP ${res.status}`
+          : Array.isArray(obj.message)
+            ? obj.message.join(' · ')
+            : String(obj.message);
+      const fields = Array.isArray(obj.fields)
+        ? obj.fields.filter((f): f is string => typeof f === 'string')
+        : undefined;
+      return { message, fields };
     }
   } catch {
     /* non-JSON body — fall through */
   }
-  return `HTTP ${res.status}`;
+  return { message: `HTTP ${res.status}` };
 }
 
 export const api = {

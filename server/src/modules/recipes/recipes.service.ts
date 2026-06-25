@@ -1,5 +1,4 @@
 import {
-    BadRequestException,
     ForbiddenException,
     Injectable,
     NotFoundException,
@@ -11,14 +10,30 @@ import { CreateRecipeDto } from './dtos/create-recipe.dto';
 import { UpdateRecipeDto } from './dtos/update-recipe.dto';
 import { DiscoverRecipesDto } from './dtos/discover-recipes.dto';
 import { slugify } from './slug.util';
+import { fieldValidationException } from '../../shared/validation-exception.factory';
+
+/** Brief shape of a recipe referenced AS an ingredient — the clickable link target. */
+const linkedRecipeBrief = { id: true, title: true, slug: true, status: true } satisfies Prisma.RecipeSelect;
 
 const recipeWithRelationsInclude = {
+    // orderBy id everywhere keeps sections and rows in authoring order — the
+    // update path wipes and recreates them in the submitted array order, so the
+    // surrogate ids increase in that order and `orderBy id` replays it. This is
+    // what makes the editor's up/down reordering persist. Steps additionally
+    // carry an explicit `order` field.
     ingredientSections: {
+        orderBy: { id: 'asc' },
         include: {
-            ingredients: { include: { ingredient: true } },
+            ingredients: {
+                include: { ingredient: true, recipeRef: { select: linkedRecipeBrief } },
+                orderBy: { id: 'asc' },
+            },
         },
     },
-    stepSections: { include: { steps: true } },
+    stepSections: {
+        orderBy: { id: 'asc' },
+        include: { steps: { orderBy: { order: 'asc' } } },
+    },
     particularities: true,
     // like count rides along on every recipe read (cards show it; Discovery
     // sorts by it) — the rows themselves stay in the social module
@@ -33,8 +48,15 @@ const recipeWithRelationsInclude = {
 const recipeDetailInclude = {
     ...recipeWithRelationsInclude,
     ingredientSections: {
+        orderBy: { id: 'asc' },
         include: {
-            ingredients: { include: { ingredient: { include: { translations: true } } } },
+            ingredients: {
+                include: {
+                    ingredient: { include: { translations: true } },
+                    recipeRef: { select: linkedRecipeBrief },
+                },
+                orderBy: { id: 'asc' },
+            },
         },
     },
 } satisfies Prisma.RecipeInclude;
@@ -162,12 +184,13 @@ export class RecipesService {
     // ─── Writes ────────────────────────────────────────────────────────
 
     async create(dto: CreateRecipeDto, authorId: string) {
-        await this.verifyIngredientsExist(dto);
+        await this.verifyIngredientRows(dto);
+        const refTitles = await this.loadRefTitles(dto);
         const status = dto.status ?? RecipeStatus.DRAFT;
         const slug = await this.generateUniqueSlug(dto.title);
         return this.prisma.recipe.create({
             data: {
-                ...this.buildRecipeContent(dto, authorId),
+                ...this.buildRecipeContent(dto, authorId, refTitles),
                 slug,
                 status,
                 publishedAt: status === RecipeStatus.PUBLISHED ? new Date() : null,
@@ -191,7 +214,12 @@ export class RecipesService {
         }
         this.assertCanModify(existing.authorId, requesterUserId, requesterRole, 'modify');
 
-        await this.verifyIngredientsExist(dto);
+        // Recipe refs already stored on this recipe are grandfathered past the
+        // must-be-published check, so a later-unpublished sub-recipe doesn't block
+        // saving unrelated edits (its nutrition just stops rolling up).
+        const grandfatheredRefIds = await this.loadStoredRefIds(id);
+        await this.verifyIngredientRows(dto, id, grandfatheredRefIds);
+        const refTitles = await this.loadRefTitles(dto);
 
         // The slug re-tracks the title only while the recipe has NEVER been
         // published (publishedAt === null). Once published, the slug is frozen
@@ -212,7 +240,7 @@ export class RecipesService {
             return tx.recipe.update({
                 where: { id },
                 data: {
-                    ...this.buildRecipeContent(dto, existing.authorId),
+                    ...this.buildRecipeContent(dto, existing.authorId, refTitles),
                     ...(slug ? { slug } : {}),
                 },
                 include: recipeDetailInclude,
@@ -395,14 +423,169 @@ export class RecipesService {
         return where;
     }
 
-    private async verifyIngredientsExist(dto: CreateRecipeDto | UpdateRecipeDto): Promise<void> {
-        const ids = dto.ingredientSections.flatMap(s => s.ingredients.map(i => i.ingredientId));
-        const missing = await this.ingredients.findMissingIngredients(ids);
-        if (missing.length > 0) {
-            throw new BadRequestException(
-                `The following ingredient IDs do not exist: ${missing.join(', ')}`,
-            );
+    /**
+     * Validate every ingredient row. Each row is at most ONE nutrition source —
+     * a catalogue ingredient OR a recipe-as-ingredient — or neither (free text,
+     * which then needs a name). Catalogue ids and recipe refs must exist; a
+     * recipe ref must be published, not this recipe, and not form a cycle.
+     * `parentId` is the recipe being edited (undefined on create — a brand-new
+     * recipe can't be referenced yet, so it can't be in a cycle).
+     * `grandfatheredRefIds` are recipe refs already stored on this recipe: they
+     * keep saving even if their target was later unpublished (the picker only
+     * ever offers published recipes, so a newly-added draft ref can't arise here).
+     */
+    private async verifyIngredientRows(
+        dto: CreateRecipeDto | UpdateRecipeDto,
+        parentId?: number,
+        grandfatheredRefIds: ReadonlySet<number> = new Set(),
+    ): Promise<void> {
+        // Collect EVERY offending row (not fail-fast) so the author sees all
+        // incomplete rows at once. Each error carries the row's dotted path so
+        // the client can highlight that exact row.
+        const errors: { path: string; message: string }[] = [];
+        const rowPath = (si: number, ri: number) => `ingredientSections.${si}.ingredients.${ri}`;
+
+        dto.ingredientSections.forEach((section, si) => {
+            section.ingredients.forEach((r, ri) => {
+                if (r.ingredientId != null && r.recipeRefId != null) {
+                    errors.push({
+                        path: rowPath(si, ri),
+                        message: 'An ingredient cannot be both a catalogue ingredient and a recipe',
+                    });
+                } else if (r.ingredientId == null && r.recipeRefId == null && !r.displayName?.trim()) {
+                    errors.push({
+                        path: rowPath(si, ri),
+                        message: 'A free-text ingredient needs a name',
+                    });
+                }
+            });
+        });
+
+        const ingredientIds = dto.ingredientSections
+            .flatMap(s => s.ingredients)
+            .map(r => r.ingredientId)
+            .filter((id): id is number => id != null);
+        const missing = new Set(await this.ingredients.findMissingIngredients(ingredientIds));
+        if (missing.size > 0) {
+            dto.ingredientSections.forEach((section, si) => {
+                section.ingredients.forEach((r, ri) => {
+                    if (r.ingredientId != null && missing.has(r.ingredientId)) {
+                        errors.push({ path: rowPath(si, ri), message: `Ingredient ${r.ingredientId} does not exist` });
+                    }
+                });
+            });
         }
+
+        const refIds = [
+            ...new Set(
+                dto.ingredientSections
+                    .flatMap(s => s.ingredients)
+                    .map(r => r.recipeRefId)
+                    .filter((id): id is number => id != null),
+            ),
+        ];
+        if (refIds.length > 0) {
+            const badRefs = await this.collectBadRecipeRefs(refIds, parentId, grandfatheredRefIds);
+            if (badRefs.size > 0) {
+                dto.ingredientSections.forEach((section, si) => {
+                    section.ingredients.forEach((r, ri) => {
+                        const reason = r.recipeRefId != null ? badRefs.get(r.recipeRefId) : undefined;
+                        if (reason) errors.push({ path: rowPath(si, ri), message: reason });
+                    });
+                });
+            }
+        }
+
+        if (errors.length > 0) throw fieldValidationException(errors);
+    }
+
+    /**
+     * For each recipe ref, the reason it can't be used (if any): doesn't exist,
+     * is this recipe, is an unpublished NEW ref, or would form a cycle. Returns
+     * a map refId → reason so callers can tie each to the row(s) that use it.
+     * A grandfathered ref (already stored on this recipe) is tolerated even if
+     * its target was since unpublished — only newly-added refs must be published.
+     */
+    private async collectBadRecipeRefs(
+        refIds: number[],
+        parentId?: number,
+        grandfatheredRefIds: ReadonlySet<number> = new Set(),
+    ): Promise<Map<number, string>> {
+        const bad = new Map<number, string>();
+        const refs = await this.prisma.recipe.findMany({
+            where: { id: { in: refIds } },
+            select: { id: true, status: true },
+        });
+        const status = new Map(refs.map(r => [r.id, r.status]));
+        for (const id of refIds) {
+            if (parentId != null && id === parentId) {
+                bad.set(id, 'A recipe cannot use itself as an ingredient');
+            } else if (!status.has(id)) {
+                bad.set(id, `Recipe ${id} does not exist`);
+            } else if (status.get(id) !== RecipeStatus.PUBLISHED && !grandfatheredRefIds.has(id)) {
+                bad.set(id, 'A recipe used as an ingredient must be published');
+            } else if (parentId != null && await this.refReaches(id, parentId)) {
+                bad.set(id, 'Using that recipe would create a cycle (it already uses this recipe)');
+            }
+        }
+        return bad;
+    }
+
+    /** Recipe-ref ids currently stored on a recipe's ingredient rows. */
+    private async loadStoredRefIds(recipeId: number): Promise<ReadonlySet<number>> {
+        const rows = await this.prisma.recipeIngredient.findMany({
+            where: { section: { recipeId }, recipeRefId: { not: null } },
+            select: { recipeRefId: true },
+        });
+        return new Set(rows.map(r => r.recipeRefId as number));
+    }
+
+    /**
+     * Titles of every recipe referenced AS an ingredient in the dto, snapshotted
+     * into the row's displayName on save. If that recipe is later deleted (the FK
+     * nulls recipeRefId), the row degrades to a readable free-text line with the
+     * recipe's former name instead of going blank.
+     */
+    private async loadRefTitles(
+        dto: CreateRecipeDto | UpdateRecipeDto,
+    ): Promise<ReadonlyMap<number, string>> {
+        const refIds = [
+            ...new Set(
+                dto.ingredientSections
+                    .flatMap(s => s.ingredients)
+                    .map(i => i.recipeRefId)
+                    .filter((id): id is number => id != null),
+            ),
+        ];
+        if (refIds.length === 0) return new Map();
+        const recipes = await this.prisma.recipe.findMany({
+            where: { id: { in: refIds } },
+            select: { id: true, title: true },
+        });
+        return new Map(recipes.map(r => [r.id, r.title]));
+    }
+
+    /** True if `startId` reaches `targetId` by following recipe-as-ingredient edges. */
+    private async refReaches(startId: number, targetId: number): Promise<boolean> {
+        const visited = new Set<number>([startId]);
+        let frontier = [startId];
+        for (let depth = 0; frontier.length > 0 && depth < 20; depth++) {
+            const rows = await this.prisma.recipeIngredient.findMany({
+                where: { section: { recipeId: { in: frontier } }, recipeRefId: { not: null } },
+                select: { recipeRefId: true },
+            });
+            const next: number[] = [];
+            for (const row of rows) {
+                const rid = row.recipeRefId!;
+                if (rid === targetId) return true;
+                if (!visited.has(rid)) {
+                    visited.add(rid);
+                    next.push(rid);
+                }
+            }
+            frontier = next;
+        }
+        return false;
     }
 
     /**
@@ -413,6 +596,7 @@ export class RecipesService {
     private buildRecipeContent(
         dto: CreateRecipeDto | UpdateRecipeDto,
         authorId: string,
+        refTitles: ReadonlyMap<number, string> = new Map(),
     ): Omit<Prisma.RecipeCreateInput, 'slug' | 'status' | 'publishedAt'> {
         return {
             title: dto.title,
@@ -434,7 +618,14 @@ export class RecipesService {
                     name: section.name,
                     ingredients: {
                         create: section.ingredients.map(ing => ({
-                            ingredientId: ing.ingredientId,
+                            ingredientId: ing.ingredientId ?? null,
+                            recipeRefId: ing.recipeRefId ?? null,
+                            // for a recipe-ref row, snapshot the referenced
+                            // recipe's title (so it survives that recipe's
+                            // deletion); otherwise the author's free-text name
+                            displayName: ing.recipeRefId != null
+                                ? (refTitles.get(ing.recipeRefId) ?? null)
+                                : (ing.displayName?.trim() || null),
                             quantity: ing.quantity,
                             unit: ing.unit,
                         })),

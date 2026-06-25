@@ -6,17 +6,30 @@ import { useContentLanguage } from '../../lib/language';
 import { localizedName } from '../../lib/localizedName';
 
 interface Suggestion {
-  /** Ingredient id for local rows, fdcId for USDA matches. */
+  /** Ingredient id for local rows, fdcId for USDA matches, recipe id for recipes. */
   id: number;
   name: string;
-  isUsda: boolean;
+  kind: 'local' | 'usda' | 'recipe';
 }
+
+/**
+ * What was picked. A catalogue/USDA pick yields an `ingredient` (USDA is
+ * confirmed first so the id is real); picking a recipe yields a `recipe` whose
+ * id goes into the row's `recipeRefId` (its nutrition rolls up by servings);
+ * "use what I typed" yields `freetext` — a name-only row with NO nutrition and
+ * NO catalogue entry (it's stored as the recipe ingredient's displayName).
+ */
+export type IngredientPick =
+  | { type: 'ingredient'; ingredientId: number; name: string }
+  | { type: 'recipe'; recipeRefId: number; name: string }
+  | { type: 'freetext'; name: string };
 
 interface IngredientAutocompleteProps {
   name: string;
   onType: (name: string) => void;
-  /** Fires with a REAL catalogue ingredient id (USDA picks are confirmed first). */
-  onSelect: (ingredientId: number, name: string) => void;
+  onSelect: (pick: IngredientPick) => void;
+  /** The recipe being edited — excluded from recipe results so it can't self-reference. */
+  excludeRecipeId?: number;
 }
 
 /**
@@ -33,6 +46,7 @@ export default function IngredientAutocomplete({
   name,
   onType,
   onSelect,
+  excludeRecipeId,
 }: IngredientAutocompleteProps) {
   const { t } = useTranslation();
   const { lang } = useContentLanguage();
@@ -72,12 +86,18 @@ export default function IngredientAutocomplete({
     timerRef.current = setTimeout(() => {
       if (seq !== seqRef.current) return;
       setSearching(true);
-      searchIngredients(value.trim())
+      // open now so the spinner shows, and the "use what you typed" option is
+      // reachable even when the search ends up finding nothing
+      setOpen(true);
+      searchIngredients(value.trim(), excludeRecipeId)
         .then(result => {
           if (seq !== seqRef.current) return;
           setSuggestions([
-            ...result.ingredients.map(i => ({ id: i.id, name: localizedName(i, lang), isUsda: false })),
-            ...result.matches.map(m => ({ id: m.fdcId, name: m.name, isUsda: true })),
+            ...result.ingredients.map(
+              i => ({ id: i.id, name: localizedName(i, lang), kind: 'local' as const }),
+            ),
+            ...result.recipes.map(r => ({ id: r.id, name: r.title, kind: 'recipe' as const })),
+            ...result.matches.map(m => ({ id: m.fdcId, name: m.name, kind: 'usda' as const })),
           ]);
           setOpen(true);
         })
@@ -94,16 +114,31 @@ export default function IngredientAutocomplete({
     cancelSearch();
     setOpen(false);
     setSuggestions([]);
-    if (!suggestion.isUsda) {
-      onSelect(suggestion.id, suggestion.name);
+    if (suggestion.kind === 'recipe') {
+      onSelect({ type: 'recipe', recipeRefId: suggestion.id, name: suggestion.name });
+      return;
+    }
+    if (suggestion.kind === 'local') {
+      onSelect({ type: 'ingredient', ingredientId: suggestion.id, name: suggestion.name });
       return;
     }
     try {
       const ingredient = await confirmIngredient(suggestion.id, suggestion.name);
-      onSelect(ingredient.id, ingredient.name);
+      onSelect({ type: 'ingredient', ingredientId: ingredient.id, name: ingredient.name });
     } catch {
       toast.error(t('form.errorIngredientConfirm'));
     }
+  };
+
+  /** Use exactly what the author typed as a FREE-TEXT ingredient: no catalogue
+   *  entry, no nutrition — just a name on this recipe (stored as displayName). */
+  const handleUseFreeText = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    cancelSearch();
+    setOpen(false);
+    setSuggestions([]);
+    onSelect({ type: 'freetext', name: trimmed });
   };
 
   return (
@@ -122,27 +157,46 @@ export default function IngredientAutocomplete({
           setTimeout(() => setOpen(false), 200);
         }}
       />
-      {open && (suggestions.length > 0 || searching) && (
+      {open && name.trim().length > 0 && (
         <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-forest/10 bg-white py-1 shadow-lg">
           {searching && (
             <li className="px-3 py-2 text-xs text-forest/50">{t('form.searching')}</li>
           )}
           {suggestions.map(s => (
-            <li key={`${s.isUsda ? 'usda' : 'local'}-${s.id}`}>
+            <li key={`${s.kind}-${s.id}`}>
               <button
                 type="button"
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-cream"
                 onMouseDown={() => void handleSelect(s)}
               >
                 <span>{s.name}</span>
-                {s.isUsda && (
+                {s.kind === 'usda' && (
                   <span className="rounded bg-leaf/40 px-1.5 py-0.5 text-[10px] font-semibold text-forest">
                     {t('form.usdaTag')}
+                  </span>
+                )}
+                {s.kind === 'recipe' && (
+                  <span className="rounded bg-coral/20 px-1.5 py-0.5 text-[10px] font-semibold text-coral">
+                    {t('form.recipeTag')}
                   </span>
                 )}
               </button>
             </li>
           ))}
+          {/* always available: use exactly what was typed as free text, even
+              with no match — a not-found ingredient is still usable (no nutrition,
+              not stored in the catalogue) */}
+          {!searching && (
+            <li className="mt-1 border-t border-forest/10 pt-1">
+              <button
+                type="button"
+                className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm text-forest/70 hover:bg-cream"
+                onMouseDown={() => handleUseFreeText()}
+              >
+                {t('form.useCustomIngredient', { name: name.trim() })}
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </div>

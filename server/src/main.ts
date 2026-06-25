@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './shared/prisma-exception.filter';
+import { validationExceptionFactory } from './shared/validation-exception.factory';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -12,6 +13,9 @@ async function bootstrap() {
         whitelist: true,
         forbidNonWhitelisted: true,
         transform: true,
+        // attach dotted field paths to 400s so the client can highlight the
+        // exact row/field that failed (it owns no validation rules itself)
+        exceptionFactory: validationExceptionFactory,
     }));
 
     // One seam for Prisma errors: maps known DB errors to clean HTTP statuses

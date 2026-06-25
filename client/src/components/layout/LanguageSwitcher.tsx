@@ -4,11 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { CONTENT_LANGUAGES, useContentLanguage, type ContentLanguage } from '../../lib/language';
 
 /**
- * Reader-facing content-language switch (M4). Picks the language recipes are
- * shown in (falling back to the original where untranslated) and scopes
- * Discovery search to translated text. Independent of the French-only UI chrome.
+ * The app language switch. Picking a language flips the whole UI live (via
+ * i18next) AND sets the language recipes are shown in (falling back to the
+ * original where untranslated), scoping Discovery search to translated text.
+ * Backed by useContentLanguage, which owns the choice and drives i18next.
+ *
+ * `align` controls which edge the dropdown anchors to: 'right' (default) suits
+ * the desktop navbar's right side; 'left' is for the mobile menu, where the
+ * button sits at the far left and a right-anchored panel would run off-screen.
  */
-export default function LanguageSwitcher() {
+export default function LanguageSwitcher({ align = 'right' }: { align?: 'left' | 'right' }) {
   const { t } = useTranslation();
   const { lang, setLang } = useContentLanguage();
   const [open, setOpen] = useState(false);
@@ -43,7 +48,9 @@ export default function LanguageSwitcher() {
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 z-50 mt-2 flex w-40 flex-col rounded-xl bg-cream p-1.5 text-forest shadow-xl"
+          className={`absolute z-50 mt-2 flex w-40 flex-col rounded-xl bg-cream p-1.5 text-forest shadow-xl ${
+            align === 'left' ? 'left-0' : 'right-0'
+          }`}
         >
           {CONTENT_LANGUAGES.map(code => (
             <li key={code}>

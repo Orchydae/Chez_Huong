@@ -5,7 +5,7 @@ const VOLUME_TO_ML: Record<string, number> = {
     cup: 240,
     tbsp: 15, tablespoon: 15,
     tsp: 5, teaspoon: 5,
-    ml: 1, l: 1000, liter: 1000,
+    ml: 1, cl: 10, dl: 100, l: 1000, liter: 1000,
     floz: 29.57, 'fl oz': 29.57,
 };
 
@@ -27,9 +27,40 @@ const UNIT_ALIASES: Record<string, string> = {
     lbs: 'lb',
     liters: 'l',
     milliliters: 'ml',
+    // Count-based units have no fixed gram weight — they convert only via a
+    // per-ingredient IngredientPortion ("1 piece of X = N g"). These aliases
+    // fold the spellings authors actually type (en + fr) onto the canonical
+    // portion names "piece"/"unit" so the typed unit lines up with stored data.
+    pc: 'piece', pcs: 'piece', pce: 'piece', pces: 'piece', pieces: 'piece',
+    morceau: 'piece', morceaux: 'piece',
+    units: 'unit', 'unite': 'unit', 'unites': 'unit',
+
+    // ── French units (Québécois first, France variants too) ─────────────
+    // Recipes are authored in French, so fold the common French unit names and
+    // abbreviations onto the canonical English keys above. Keys are written in
+    // normalizeUnit's output form — accent- and period-free, single-spaced — so
+    // "c. à thé", "c à thé" and "càt" all collapse to the same key here.
+    // Volumes
+    tasse: 'cup', tasses: 'cup',
+    'cuillere a soupe': 'tbsp', 'cuiller a soupe': 'tbsp', 'c a soupe': 'tbsp', 'c a s': 'tbsp', cas: 'tbsp',
+    'cuillere a the': 'tsp', 'cuiller a the': 'tsp', 'c a the': 'tsp', 'c a t': 'tsp', cat: 'tsp',
+    'cuillere a cafe': 'tsp', 'c a cafe': 'tsp', 'c a c': 'tsp', // France says "café" where Québec says "thé"
+    litre: 'l', litres: 'l',
+    millilitre: 'ml', millilitres: 'ml',
+    centilitre: 'cl', centilitres: 'cl',
+    decilitre: 'dl', decilitres: 'dl',
+    // Weights (the g / kg / ml / l symbols are language-neutral and already convert)
+    gramme: 'g', grammes: 'g',
+    kilogramme: 'kg', kilogrammes: 'kg', kilo: 'kg', kilos: 'kg',
+    once: 'oz', onces: 'oz',
+    livre: 'lb', livres: 'lb',
 };
 
-const NEGLIGIBLE_UNITS = new Set(['pinch', 'dash', 'smidgen', 'drop', 'to taste', 'as needed']);
+const NEGLIGIBLE_UNITS = new Set([
+    'pinch', 'dash', 'smidgen', 'drop', 'to taste', 'as needed',
+    // French equivalents — contribute nothing to nutrition, same as the English ones
+    'pincee', 'pincees', 'goutte', 'gouttes', 'au gout', 'a volonte',
+]);
 
 // ─── Inputs / outputs ────────────────────────────────────────────────
 
@@ -94,7 +125,15 @@ export function parseQuantity(quantity: string): number {
 }
 
 export function normalizeUnit(unit: string): string {
-    const normalized = unit.toLowerCase().trim();
+    const normalized = unit
+        .toLowerCase()
+        // Fold French accents so a unit matches whether or not the author typed
+        // them (à→a, é→e, …) — French is very often typed without accents.
+        .replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[îïì]/g, 'i')
+        .replace(/[ôö]/g, 'o').replace(/[ûüù]/g, 'u').replace(/ç/g, 'c')
+        .replace(/\./g, '')              // drop periods so "c. à s." matches "c a s"
+        .replace(/\s+/g, ' ')            // collapse repeated whitespace
+        .trim();
     return UNIT_ALIASES[normalized] || normalized;
 }
 
