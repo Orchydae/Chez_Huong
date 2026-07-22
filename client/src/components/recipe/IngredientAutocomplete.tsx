@@ -170,6 +170,11 @@ export default function IngredientAutocomplete({
                 onMouseDown={() => void handleSelect(s)}
               >
                 <span>{s.name}</span>
+                {s.kind === 'local' && (
+                  <span className="rounded bg-forest/10 px-1.5 py-0.5 text-[10px] font-semibold text-forest/70">
+                    {t('form.baseTag')}
+                  </span>
+                )}
                 {s.kind === 'usda' && (
                   <span className="rounded bg-leaf/40 px-1.5 py-0.5 text-[10px] font-semibold text-forest">
                     {t('form.usdaTag')}

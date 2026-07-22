@@ -16,7 +16,9 @@ import NotFoundPage from './pages/not-found/NotFoundPage';
 /** Reset scroll on navigation (the browser keeps it per-SPA-route otherwise). */
 function ScrollToTop() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   return null;
 }
 

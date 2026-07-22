@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import type { NutrientValues } from './nutrient-values';
 
 export interface UsdaFoodMatch {
@@ -76,6 +77,37 @@ function describeAxiosError(error: unknown): { message: string; status?: number;
     };
 }
 
+// USDA's nginx gateway intermittently rejects perfectly well-formed requests
+// (~1 in 6 in practice), so every call is retried a few times with a short
+// backoff. Two ceilings keep a hung/slow gateway from stalling the live-typing
+// picker: each attempt is time-boxed (USDA_PER_ATTEMPT_TIMEOUT_MS), AND the whole
+// retry sequence is bounded by an overall wall-clock deadline
+// (USDA_TOTAL_DEADLINE_MS) so the timeouts can't stack. The instant gateway-400s
+// this targets fail fast and never approach either ceiling.
+const USDA_MAX_ATTEMPTS = 3;
+const USDA_RETRY_BACKOFF_MS = 200;
+const USDA_PER_ATTEMPT_TIMEOUT_MS = 5_000;
+const USDA_TOTAL_DEADLINE_MS = 8_000;
+
+const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+/**
+ * Which failures are worth retrying. The gateway's spurious 400s arrive with an
+ * HTML body (a raw string once axios gives up parsing it), whereas the API's own
+ * validation errors come back as parsed JSON (an object) — so a string body on a
+ * 400 is the tell-tale of the flaky gateway. Rate-limits (429), 5xx, and
+ * network/timeout errors (no response at all) are transient too; a genuine JSON
+ * 4xx is not.
+ */
+function isTransientUsdaError(error: unknown): boolean {
+    const e = error as { response?: { status?: number; data?: unknown } };
+    const status = e.response?.status;
+    if (status === undefined) return true; // no response: network error / timeout
+    if (status === 429 || status >= 500) return true;
+    if (status === 400) return typeof e.response?.data === 'string';
+    return false;
+}
+
 /**
  * USDA `dataType`s we accept — generic, lab-analysed/reference foods only.
  * "Branded" (label data for commercial products) is deliberately excluded so
@@ -112,9 +144,43 @@ export class UsdaService {
         this.apiKey = key;
     }
 
+    /**
+     * GET the USDA API, retrying transient failures (see isTransientUsdaError)
+     * with a short escalating backoff. Two ceilings bound total latency so a hung
+     * gateway can't stall the picker: a per-attempt timeout AND an overall
+     * deadline across all attempts (each attempt gets whatever time is left, so
+     * the timeouts never stack). Non-transient errors are thrown at once; the last
+     * error is re-thrown once the deadline or attempt budget is spent, so callers
+     * still log and handle it exactly as before.
+     */
+    private async getWithRetry<T>(
+        url: string,
+        config: AxiosRequestConfig,
+        attempts = USDA_MAX_ATTEMPTS,
+    ): Promise<AxiosResponse<T>> {
+        const deadline = Date.now() + USDA_TOTAL_DEADLINE_MS;
+        let lastError: unknown;
+        for (let attempt = 1; attempt <= attempts; attempt++) {
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) break;
+            // cap this attempt at whatever the overall deadline still allows
+            const timeout = Math.min(USDA_PER_ATTEMPT_TIMEOUT_MS, remaining);
+            try {
+                return await this.http.axiosRef.get<T>(url, { timeout, ...config });
+            } catch (error: unknown) {
+                lastError = error;
+                if (attempt === attempts || !isTransientUsdaError(error)) throw error;
+                const backoff = USDA_RETRY_BACKOFF_MS * attempt;
+                if (Date.now() + backoff >= deadline) break; // no point sleeping past the deadline
+                await delay(backoff);
+            }
+        }
+        throw lastError;
+    }
+
     async searchFoods(query: string, maxResults = 5): Promise<UsdaFoodMatch[]> {
         try {
-            const response = await this.http.axiosRef.get<UsdaSearchResponse>(
+            const response = await this.getWithRetry<UsdaSearchResponse>(
                 `${this.baseUrl}/foods/search`,
                 {
                     params: {
@@ -148,7 +214,7 @@ export class UsdaService {
 
     async getFoodNutrition(fdcId: number): Promise<UsdaNutritionData> {
         try {
-            const response = await this.http.axiosRef.get<UsdaFoodResponse>(
+            const response = await this.getWithRetry<UsdaFoodResponse>(
                 `${this.baseUrl}/food/${fdcId}`,
                 { params: { api_key: this.apiKey, format: 'full' }, paramsSerializer: usdaParamsSerializer },
             );
@@ -162,7 +228,7 @@ export class UsdaService {
 
     async getFoodPortions(fdcId: number): Promise<UsdaPortionData[]> {
         try {
-            const response = await this.http.axiosRef.get<UsdaFoodResponse>(
+            const response = await this.getWithRetry<UsdaFoodResponse>(
                 `${this.baseUrl}/food/${fdcId}`,
                 { params: { api_key: this.apiKey, format: 'full' }, paramsSerializer: usdaParamsSerializer },
             );

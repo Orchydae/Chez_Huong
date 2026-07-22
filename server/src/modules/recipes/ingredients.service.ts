@@ -10,6 +10,11 @@ function escapeLike(value: string): string {
     return value.replace(/[\\%_]/g, '\\$&');
 }
 
+// How many USDA matches the combined author picker shows. The standalone
+// /search/usda endpoint still returns more; a live-typing dropdown just needs
+// a handful on top of the local catalogue.
+const PICKER_USDA_LIMIT = 10;
+
 @Injectable()
 export class IngredientsService {
     constructor(
@@ -133,12 +138,12 @@ export class IngredientsService {
         // picker. A failed source just yields no results (logged, never thrown),
         // so the author can still pick a catalogue ingredient, a recipe, or type
         // a free-text one.
-        const [ingredients, matches, recipes] = await Promise.all([
+        const [ingredients, usdaMatches, recipes] = await Promise.all([
             this.searchDatabase(query).catch((err: unknown) => {
                 console.error('Local ingredient search failed:', err);
                 return [];
             }),
-            this.searchUsda(query).catch((err: unknown) => {
+            this.searchUsda(query, PICKER_USDA_LIMIT).catch((err: unknown) => {
                 console.error('USDA ingredient search failed (continuing without USDA):', err);
                 return [];
             }),
@@ -147,6 +152,15 @@ export class IngredientsService {
                 return [];
             }),
         ]);
+        // A food already promoted into the catalogue carries its origin fdcId, so
+        // it would otherwise surface twice — once as a local row, once as the raw
+        // USDA match. Drop the USDA duplicate so each food appears once.
+        const localFdcIds = new Set(
+            ingredients
+                .map((i: { fdcId: number | null }) => i.fdcId)
+                .filter((id): id is number => id !== null),
+        );
+        const matches = usdaMatches.filter(m => !localFdcIds.has(m.fdcId));
         return {
             found: ingredients.length > 0 || matches.length > 0 || recipes.length > 0,
             ingredients,
