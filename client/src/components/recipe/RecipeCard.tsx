@@ -31,29 +31,31 @@ export default function RecipeCard({ recipe }: { recipe: Recipe }) {
         aria-label={recipe.title}
       />
 
-      <button
-        type="button"
-        aria-pressed={liked}
-        aria-label={liked ? t('social.unlike') : t('social.like')}
-        // after: extends the touch target to ~50px (the visible circle stays
-        // 34px) so a near-miss toggles the like instead of falling through to
-        // the stretched card link below — no visual change at any width
-        className="absolute top-2.5 right-2.5 z-20 rounded-full bg-white/85 p-2 shadow-sm backdrop-blur-sm transition after:absolute after:-inset-2 after:content-[''] hover:scale-110"
-        onClick={toggle}
-      >
-        <Heart size={18} className={liked ? 'fill-coral text-coral' : 'text-forest'} />
-      </button>
-
       {/* Cut-out dish PNGs: object-contain keeps the whole cut-out visible on
           the cream; on hover it grows from its base and lifts out of the frame.
-          origin-bottom anchors the "rooted then rising" feel. */}
-      <div className="aspect-[4/3]">
+          origin-bottom anchors the "rooted then rising" feel. The like button
+          lives inside this box so it pins to the image's bottom-right corner
+          (the card's own bottom-right is taken by the time/likes footer). */}
+      <div className="relative aspect-[4/3]">
         <img
           src={recipe.imageUrl ?? FALLBACK_RECIPE_IMAGE}
           alt={recipe.title}
           loading="lazy"
-          className="h-full w-full origin-bottom object-contain drop-shadow-[0_6px_8px_rgba(25,47,1,0.18)] transition duration-300 ease-out group-hover:drop-shadow-[0_22px_20px_rgba(25,47,1,0.30)] motion-safe:group-hover:-translate-y-[14%] motion-safe:group-hover:scale-[1.15]"
+          className="h-full w-full origin-bottom object-contain drop-shadow-[0_6px_8px_rgba(25,47,1,0.18)] transition duration-300 ease-out group-hover:drop-shadow-[0_22px_20px_rgba(25,47,1,0.30)] motion-safe:group-hover:-translate-y-[3%] motion-safe:group-hover:scale-[1.15]"
         />
+
+        <button
+          type="button"
+          aria-pressed={liked}
+          aria-label={liked ? t('social.unlike') : t('social.like')}
+          // after: extends the touch target to ~50px (the visible circle stays
+          // 34px) so a near-miss toggles the like instead of falling through to
+          // the stretched card link below — no visual change at any width
+          className="absolute right-2.5 bottom-2.5 z-20 rounded-full bg-white/85 p-2 shadow-sm backdrop-blur-sm transition after:absolute after:-inset-2 after:content-[''] hover:scale-110"
+          onClick={toggle}
+        >
+          <Heart size={18} className={liked ? 'fill-coral text-coral' : 'text-forest'} />
+        </button>
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <h3 className="text-xl leading-snug">{recipe.title}</h3>
