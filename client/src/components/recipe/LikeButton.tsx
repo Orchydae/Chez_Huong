@@ -1,9 +1,6 @@
 import { Heart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../api/auth.api';
-import { useLikeStatus, useToggleLike } from '../../api/social.api';
-import { ApiError } from '../../api/client';
-import { toast } from '../../lib/toast';
+import { useRecipeLike } from './useRecipeLike';
 
 interface LikeButtonProps {
   recipeId: number;
@@ -18,26 +15,11 @@ interface LikeButtonProps {
  */
 export default function LikeButton({ recipeId, fallbackCount }: LikeButtonProps) {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const { data: status, isError } = useLikeStatus(recipeId);
-  const toggleLike = useToggleLike(recipeId);
-
-  const handleClick = async () => {
-    if (!user) {
-      toast.error(t('social.loginToLike'));
-      return;
-    }
-    try {
-      await toggleLike.mutateAsync();
-    } catch (err) {
-      console.error(err);
-      if (err instanceof ApiError && err.status === 0) toast.error(t('common.errorNetwork'));
-      else toast.error(t('common.errorGeneric'));
-    }
-  };
-
-  const liked = status?.likedByMe ?? false;
-  const count = status?.likeCount ?? fallbackCount;
+  const { liked, count, pending, loading, toggle } = useRecipeLike({
+    from: 'query',
+    recipeId,
+    fallbackCount,
+  });
 
   return (
     <button
@@ -45,9 +27,9 @@ export default function LikeButton({ recipeId, fallbackCount }: LikeButtonProps)
       aria-pressed={liked}
       // a failed likes read doesn't dead-end the button: the toggle response
       // is authoritative and repopulates the cache on the next click
-      disabled={(status === undefined && !isError) || toggleLike.isPending}
+      disabled={loading || pending}
       className="flex w-fit items-center gap-2 rounded-full border border-cream/40 px-4 py-2 text-sm transition hover:bg-cream/10 disabled:opacity-60"
-      onClick={() => void handleClick()}
+      onClick={toggle}
     >
       <Heart
         size={16}

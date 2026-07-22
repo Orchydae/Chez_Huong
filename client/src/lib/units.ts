@@ -11,10 +11,19 @@
  * worst case is offering (or hiding) an optional field; no save is blocked.
  */
 
-// Mirror the server's normalizeUnit: lowercase, fold French accents, drop
-// periods, collapse whitespace — so "Tasse", "c. à thé" and "càt" all line up
-// with the keys below.
-function normalize(unit: string): string {
+/**
+ * Fold a unit for loose matching: lowercase, strip French accents, drop periods,
+ * collapse whitespace — so "Tasse", "c. à thé" and "càt" all line up with the
+ * keys below. Mirrors the FOLD step of the server's `normalizeUnit` only — it
+ * does NOT resolve the server's unit aliases (the client never needs that).
+ *
+ * This is the single client-side copy of that fold, exported so the unit picker
+ * (UnitAutocomplete) filters by exactly the same rule. UI hint / display
+ * filtering only — the server stays the single source of truth for what
+ * actually converts; if this drifts from the server, the worst case is offering
+ * (or hiding) an optional field or a suggestion, never a blocked save.
+ */
+export function foldUnit(unit: string): string {
   return unit
     .toLowerCase()
     .replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[îïì]/g, 'i')
@@ -51,7 +60,7 @@ const SELF_CONVERTING_UNITS = new Set([
 
 /** True when this unit (e.g. "pcs", "slice") would otherwise be skipped in nutrition. */
 export function unitNeedsWeight(unit: string): boolean {
-  const u = normalize(unit);
+  const u = foldUnit(unit);
   return u.length > 0 && !SELF_CONVERTING_UNITS.has(u);
 }
 

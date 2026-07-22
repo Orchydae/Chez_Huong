@@ -10,14 +10,22 @@ import {
 } from '../../api/recipes.api';
 import type { Recipe, RecipeLinkKind } from '../../api/types';
 import { RECIPE_LINK_KIND_VALUES } from '../../api/types';
-import { ApiError } from '../../api/client';
 import { toast } from '../../lib/toast';
+import { useApiErrorToast, type ErrorOverrides } from '../../lib/apiError';
 import Spinner from '../ui/Spinner';
 
 const KIND_LABEL_KEY: Record<RecipeLinkKind, string> = {
   PAIRS_WITH: 'pairsWith',
   USES: 'uses',
   VARIATION_OF: 'variationOf',
+};
+
+// 409 = exact duplicate; 400 = self-link or own-draft target; 404 = target gone
+// (or a draft hidden from this caller). 403 / 0 / generic use the shared defaults.
+const LINK_ERRORS: ErrorOverrides = {
+  409: 'links.errorDuplicate',
+  400: 'links.errorTarget',
+  404: 'links.errorTarget',
 };
 
 /**
@@ -86,18 +94,7 @@ export default function RecipeLinkManager({ recipeId }: { recipeId: number }) {
     }, 400);
   };
 
-  const reportError = (err: unknown) => {
-    // raw (English) server text goes to the console only — the rule
-    console.error(err);
-    if (err instanceof ApiError && err.status === 409) toast.error(t('links.errorDuplicate'));
-    // 400 = self-link or own-draft target; 404 = target gone (or a draft
-    // hidden from this caller — the server answers as if it doesn't exist)
-    else if (err instanceof ApiError && (err.status === 400 || err.status === 404))
-      toast.error(t('links.errorTarget'));
-    else if (err instanceof ApiError && err.status === 403) toast.error(t('common.errorForbidden'));
-    else if (err instanceof ApiError && err.status === 0) toast.error(t('common.errorNetwork'));
-    else toast.error(t('common.errorGeneric'));
-  };
+  const reportError = useApiErrorToast();
 
   const handleSelect = async (target: Recipe) => {
     cancelSearch();
@@ -108,7 +105,7 @@ export default function RecipeLinkManager({ recipeId }: { recipeId: number }) {
       await createLink.mutateAsync({ toId: target.id, kind });
       toast.success(t('links.added'));
     } catch (err) {
-      reportError(err);
+      reportError(err, LINK_ERRORS);
     }
   };
 
@@ -119,7 +116,7 @@ export default function RecipeLinkManager({ recipeId }: { recipeId: number }) {
       await deleteLink.mutateAsync(linkId);
       toast.success(t('links.removed'));
     } catch (err) {
-      reportError(err);
+      reportError(err, LINK_ERRORS);
     } finally {
       setRemovingId(null);
     }

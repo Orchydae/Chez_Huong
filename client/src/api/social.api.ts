@@ -24,10 +24,17 @@ export const socialKeys = {
 
 // ─── Likes ─────────────────────────────────────────────────────────────
 
-export function useLikeStatus(recipeId: number) {
+/**
+ * The caller's like state for one recipe. `enabled` is off for the Discovery
+ * card surface — cards seed from the recipe row's own like include, so firing a
+ * per-recipe likes read for each of 12 cards a page would be wasteful; only the
+ * recipe-hero surface actually needs this read. See `useRecipeLike`.
+ */
+export function useLikeStatus(recipeId: number, enabled = true) {
   return useQuery({
     queryKey: socialKeys.likes(recipeId),
     queryFn: () => api.get<LikeStatus>(`/recipes/${recipeId}/likes`),
+    enabled,
   });
 }
 

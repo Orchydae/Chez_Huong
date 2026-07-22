@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from 'react';
 import { Mail, Lock, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../api/auth.api';
-import { ApiError } from '../../api/client';
+import { apiErrorKey } from '../../lib/apiError';
 import Modal from '../ui/Modal';
 import TextField from '../ui/TextField';
 import Button from '../ui/Button';
@@ -31,21 +31,23 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: RegisterModa
       await register({ firstName, lastName, email, password });
       onClose();
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 409) setError(t('auth.errorEmailTaken'));
-        else if (err.status === 429) setError(t('auth.errorTooManyAttempts'));
-        else if (err.status === 0) setError(t('auth.errorNetwork'));
-        else if (err.status === 400) {
-          // the server is the single source of truth for validation — we only
-          // translate its (English) verdict into the matching localized line
-          const reason = err.message.toLowerCase();
-          if (reason.includes('password')) setError(t('auth.passwordHint'));
-          else if (reason.includes('email')) setError(t('auth.errorEmailInvalid'));
-          else setError(t('auth.errorGeneric'));
-        } else setError(t('auth.errorGeneric'));
-      } else {
-        setError(t('auth.errorGeneric'));
-      }
+      // shown inline (not a toast); 0 → network and the fallback → generic come
+      // from the shared defaults. The server owns validation — for a 400 we only
+      // translate its (English) verdict into the matching localized line.
+      setError(
+        t(
+          apiErrorKey(err, {
+            409: 'auth.errorEmailTaken',
+            429: 'auth.errorTooManyAttempts',
+            400: reason =>
+              reason.includes('password')
+                ? 'auth.passwordHint'
+                : reason.includes('email')
+                  ? 'auth.errorEmailInvalid'
+                  : undefined,
+          }),
+        ),
+      );
     } finally {
       setLoading(false);
     }

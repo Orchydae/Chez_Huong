@@ -9,8 +9,8 @@ import {
   useUnpublishRecipe,
 } from '../../api/recipes.api';
 import type { Recipe } from '../../api/types';
-import { ApiError } from '../../api/client';
 import { toast } from '../../lib/toast';
+import { useApiErrorToast } from '../../lib/apiError';
 import { formatDate } from '../../lib/format';
 import { FALLBACK_RECIPE_IMAGE } from '../../lib/constants';
 import Button from '../../components/ui/Button';
@@ -39,13 +39,9 @@ export default function MyRecipesPage() {
       return next;
     });
 
-  const reportError = (err: unknown) => {
-    // raw (English) server text goes to the console only — the rule
-    console.error(err);
-    if (err instanceof ApiError && err.status === 403) toast.error(t('common.errorForbidden'));
-    else if (err instanceof ApiError && err.status === 0) toast.error(t('common.errorNetwork'));
-    else toast.error(t('common.errorGeneric'));
-  };
+  // 403 (not the author) / 0 (network) / generic all come from the shared
+  // defaults — the lifecycle mutations add no domain rows.
+  const reportError = useApiErrorToast();
 
   const runLifecycle = async (recipe: Recipe, action: 'publish' | 'unpublish') => {
     if (pending[recipe.id]) return;

@@ -1,27 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { UNIT_OPTION_KEYS } from '../../lib/units';
+import { UNIT_OPTION_KEYS, foldUnit } from '../../lib/units';
 
 interface UnitAutocompleteProps {
   value: string;
   onChange: (unit: string) => void;
   /** Input styling, kept in step with the form's other fields. */
   inputClassName: string;
-}
-
-// Accent/period-insensitive fold for matching what's typed against the offered
-// labels — display-only filtering, never used for storage (the raw text the
-// author types or picks is what gets saved; the server normalizes it). Mirrors
-// the spirit of the server's normalizeUnit so "ca", "c. à" and "càt" all
-// surface the spoon units.
-function fold(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[îïì]/g, 'i')
-    .replace(/[ôö]/g, 'o').replace(/[ûüù]/g, 'u').replace(/ç/g, 'c')
-    .replace(/\./g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 /**
@@ -38,11 +23,11 @@ export default function UnitAutocomplete({ value, onChange, inputClassName }: Un
 
   const labels = UNIT_OPTION_KEYS.map(key => t(`unitOption.${key}`));
 
-  const typed = fold(value);
+  const typed = foldUnit(value);
   // empty field → browse every unit; otherwise substring match, hiding the one
   // that already equals what's typed (nothing left to suggest)
   const matches = labels.filter(label => {
-    const f = fold(label);
+    const f = foldUnit(label);
     return typed === '' ? true : f.includes(typed) && f !== typed;
   });
 

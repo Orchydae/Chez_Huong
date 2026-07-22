@@ -11,8 +11,8 @@ import {
 } from '../../api/social.api';
 import type { Comment } from '../../api/types';
 import { useAuth } from '../../api/auth.api';
-import { ApiError } from '../../api/client';
 import { toast } from '../../lib/toast';
+import { useApiErrorToast } from '../../lib/apiError';
 import { formatDate } from '../../lib/format';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -51,13 +51,9 @@ export default function CommentThread({ recipeId }: { recipeId: number }) {
   const [draft, setDraft] = useState('');
   const [toDelete, setToDelete] = useState<Comment | null>(null);
 
-  const reportError = (err: unknown) => {
-    // raw (English) server text goes to the console only — the rule
-    console.error(err);
-    if (err instanceof ApiError && err.status === 0) toast.error(t('common.errorNetwork'));
-    else if (err instanceof ApiError && err.status === 403) toast.error(t('common.errorForbidden'));
-    else toast.error(t('common.errorGeneric'));
-  };
+  // 403 (someone else's comment) / 0 (network) / generic all come from the
+  // shared defaults — no domain rows to add.
+  const reportError = useApiErrorToast();
 
   // Sent raw — the server trims and rejects empty content (its DTO is the
   // single source of truth; native `required` is the only client-side gate).

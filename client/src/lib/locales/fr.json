@@ -72,8 +72,6 @@
     "errorTooManyAttempts": "Trop de tentatives. Réessayez plus tard.",
     "errorEmailTaken": "Un compte existe déjà avec cette adresse",
     "errorEmailInvalid": "Adresse courriel invalide",
-    "errorGeneric": "Une erreur est survenue. Réessayez.",
-    "errorNetwork": "Impossible de contacter le serveur",
     "passwordHint": "6 caractères minimum, avec un chiffre et un caractère spécial",
     "sessionExpired": "Votre session a expiré. Reconnectez-vous."
   },

@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../api/auth.api';
-import { ApiError } from '../../api/client';
+import { apiErrorKey } from '../../lib/apiError';
 import Modal from '../ui/Modal';
 import TextField from '../ui/TextField';
 import Button from '../ui/Button';
@@ -29,14 +29,16 @@ export default function LoginModal({ onClose, onSwitchToRegister }: LoginModalPr
       await login(email, password);
       onClose();
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 401) setError(t('auth.errorInvalidCredentials'));
-        else if (err.status === 429) setError(t('auth.errorTooManyAttempts'));
-        else if (err.status === 0) setError(t('auth.errorNetwork'));
-        else setError(t('auth.errorGeneric'));
-      } else {
-        setError(t('auth.errorGeneric'));
-      }
+      // shown inline (not a toast), so map to a key directly; 0 → network and
+      // the fallback → generic come from the shared defaults
+      setError(
+        t(
+          apiErrorKey(err, {
+            401: 'auth.errorInvalidCredentials',
+            429: 'auth.errorTooManyAttempts',
+          }),
+        ),
+      );
     } finally {
       setLoading(false);
     }

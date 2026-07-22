@@ -4,9 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../api/auth.api';
 import { USERS_PAGE_SIZE, useUpdateUserRole, useUsers } from '../../api/users.api';
 import { ROLE_VALUES, type Role, type SafeUser } from '../../api/types';
-import { ApiError } from '../../api/client';
 import { toast } from '../../lib/toast';
+import { useApiErrorToast, type ErrorOverrides } from '../../lib/apiError';
 import Spinner from '../../components/ui/Spinner';
+
+// The server refuses an admin changing their OWN role with a 400 → explain that
+// specifically; 403 / 0 / generic use the shared defaults.
+const ROLE_ERRORS: ErrorOverrides = { 400: 'admin.errorSelf' };
 
 /** Admin-only user directory: search by name/email, promote/demote to any role (M7). */
 export default function AdminUsersPage() {
@@ -28,13 +32,7 @@ export default function AdminUsersPage() {
   // per-row in-flight state keyed by id so concurrent rows don't clobber each other
   const [pending, setPending] = useState<Record<string, true>>({});
 
-  const reportError = (err: unknown) => {
-    console.error(err); // raw (English) server text stays in the console — the rule
-    if (err instanceof ApiError && err.status === 403) toast.error(t('common.errorForbidden'));
-    else if (err instanceof ApiError && err.status === 400) toast.error(t('admin.errorSelf'));
-    else if (err instanceof ApiError && err.status === 0) toast.error(t('common.errorNetwork'));
-    else toast.error(t('common.errorGeneric'));
-  };
+  const reportError = useApiErrorToast();
 
   const changeRole = async (target: SafeUser, role: Role) => {
     if (role === target.role || pending[target.id]) return;
@@ -48,7 +46,7 @@ export default function AdminUsersPage() {
         }),
       );
     } catch (err) {
-      reportError(err);
+      reportError(err, ROLE_ERRORS);
     } finally {
       setPending(prev => {
         const next = { ...prev };

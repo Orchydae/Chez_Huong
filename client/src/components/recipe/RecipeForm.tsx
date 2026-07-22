@@ -18,6 +18,7 @@ import { uploadImage } from '../../api/recipes.api';
 import { upsertIngredientPortion } from '../../api/ingredients.api';
 import { ApiError } from '../../api/client';
 import { toast } from '../../lib/toast';
+import { useApiErrorToast } from '../../lib/apiError';
 import { CONTENT_LANGUAGES } from '../../lib/language';
 import { unitNeedsWeight } from '../../lib/units';
 import IngredientAutocomplete from './IngredientAutocomplete';
@@ -164,6 +165,7 @@ function sectionsFromRecipe(recipe: Recipe): {
 
 export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps) {
   const { t } = useTranslation();
+  const reportError = useApiErrorToast();
   const initialSections = initial ? sectionsFromRecipe(initial) : null;
 
   /* ── scalar fields ──────────────────────────────────────────────── */
@@ -402,12 +404,12 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
 
       await onSubmit(payload, intent);
     } catch (err) {
-      // server text is English — map to localized messages (rule: all visible
-      // text via i18n); the raw message stays available in the console
-      console.error(err);
+      // A 400 that names the offending rows/fields is special: highlight them
+      // and scroll to the first (DOM side effects the shared mapper can't own),
+      // so this branch stays here. A field-less 400 is a form-wide validation
+      // message; everything else delegates to the app-wide policy.
       if (err instanceof ApiError && err.status === 400 && err.fields && err.fields.length > 0) {
-        // server told us exactly which rows/fields failed — highlight them and
-        // scroll to the first, instead of a vague form-wide error
+        console.error(err);
         setErrorPaths(err.fields);
         toast.error(t('form.errorRowsIncomplete'));
         requestAnimationFrame(() => {
@@ -415,15 +417,9 @@ export default function RecipeForm({ mode, initial, onSubmit }: RecipeFormProps)
             .querySelector('[data-field-error="true"]')
             ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
-      } else if (err instanceof ApiError && err.status === 403) {
-        toast.error(t('common.errorForbidden'));
-      } else if (err instanceof ApiError && err.status === 400) {
-        toast.error(t('form.errorValidation'));
-      } else if (err instanceof ApiError && err.status === 0) {
-        toast.error(t('common.errorNetwork'));
-      } else {
-        toast.error(t('common.errorGeneric'));
+        return;
       }
+      reportError(err, { 400: 'form.errorValidation' });
     } finally {
       setSubmitting(false);
     }

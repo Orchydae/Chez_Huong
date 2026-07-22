@@ -72,8 +72,6 @@
     "errorTooManyAttempts": "Too many attempts. Please try again later.",
     "errorEmailTaken": "An account already exists with this address",
     "errorEmailInvalid": "Invalid email address",
-    "errorGeneric": "Something went wrong. Please try again.",
-    "errorNetwork": "Could not reach the server",
     "passwordHint": "At least 6 characters, with a number and a special character",
     "sessionExpired": "Your session has expired. Please sign in again."
   },
