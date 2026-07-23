@@ -164,6 +164,7 @@
     "titlePlaceholder": "Titre de la recette",
     "descriptionPlaceholder": "Description de la recette...",
     "locale": "Langue",
+    "localeHint": "Langue d'origine",
     "cuisinePlaceholder": "Viêt Nam",
     "yieldLabel": "Donne (optionnel)",
     "yieldPlaceholder": "ex : 24 raviolis",
@@ -208,7 +209,13 @@
     "errorValidation": "Certains champs sont incomplets ou invalides. Vérifiez le formulaire et réessayez.",
     "errorRowsIncomplete": "Certaines lignes sont incomplètes — voir les champs surlignés en rouge.",
     "errorFieldRequired": "À compléter",
-    "errorIngredientConfirm": "Impossible d'ajouter cet ingrédient au catalogue"
+    "errorIngredientConfirm": "Impossible d'ajouter cet ingrédient au catalogue",
+    "autosaveSaving": "Enregistrement…",
+    "autosaveSaved": "Enregistré",
+    "autosaveError": "Échec de l'enregistrement automatique — votre dernière modification n'est pas sauvegardée",
+    "publishIncompleteTitle": "Publier quand même ?",
+    "publishIncompleteMessage": "Certains champs sont encore incomplets (surlignés en rouge). Vous pouvez les compléter maintenant, ou publier quand même et terminer la recette plus tard.",
+    "publishAnyway": "Publier quand même"
   },
   "createRecipe": {
     "title": "Nouvelle recette",

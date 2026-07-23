@@ -2,7 +2,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import RecipeForm, { type SubmitIntent } from '../../components/recipe/RecipeForm';
 import RecipeLinkManager from '../../components/recipe/RecipeLinkManager';
+import TranslateRecipePanel from '../../components/recipe/TranslateRecipePanel';
 import {
+  useAutosaveRecipe,
   usePublishRecipe,
   useRecipe,
   useUnpublishRecipe,
@@ -21,6 +23,7 @@ export default function EditRecipePage() {
   const { user } = useAuth();
   const { data: recipe, isPending, isError, error } = useRecipe(id);
   const updateRecipe = useUpdateRecipe();
+  const autosaveRecipe = useAutosaveRecipe();
   const publishRecipe = usePublishRecipe();
   const unpublishRecipe = useUnpublishRecipe();
 
@@ -59,12 +62,21 @@ export default function EditRecipePage() {
     );
   }
 
-  const handleSubmit = async (payload: UpdateRecipePayload, intent: SubmitIntent) => {
+  // Background autosave: a plain PUT the server never blocks on completeness.
+  // ONLY for drafts — a published recipe is live, so we never stream half-edits
+  // to readers; those are saved explicitly (and warned about if incomplete).
+  const handleAutosave = async (payload: UpdateRecipePayload) => {
+    await autosaveRecipe.mutateAsync({ id: recipe.id, payload });
+  };
+
+  const handleSubmit = async (payload: UpdateRecipePayload, intent: SubmitIntent, force: boolean) => {
     // The server ignores a status field in a PUT body — lifecycle changes from
     // the edit screen are PUT (save content) then PATCH /publish or /unpublish.
-    let saved = await updateRecipe.mutateAsync({ id: recipe.id, payload });
+    // Saving a PUBLISHED recipe (or publishing) may raise RECIPE_INCOMPLETE;
+    // RecipeForm confirms and retries here with force.
+    let saved = await updateRecipe.mutateAsync({ id: recipe.id, payload, force });
     if (intent === 'publish') {
-      saved = await publishRecipe.mutateAsync(recipe.id);
+      saved = await publishRecipe.mutateAsync({ id: recipe.id, force });
       toast.success(t('editRecipe.successPublished'));
     } else if (intent === 'unpublish') {
       saved = await unpublishRecipe.mutateAsync(recipe.id);
@@ -78,7 +90,14 @@ export default function EditRecipePage() {
   return (
     <div>
       <h1 className="sr-only">{t('editRecipe.title')}</h1>
-      <RecipeForm mode="edit" initial={recipe} onSubmit={handleSubmit} />
+      <RecipeForm
+        mode="edit"
+        initial={recipe}
+        onSubmit={handleSubmit}
+        onAutosave={recipe.status === 'DRAFT' ? handleAutosave : undefined}
+        onCancel={() => void navigate(-1)}
+        heroActions={<TranslateRecipePanel recipe={recipe} />}
+      />
       <RecipeLinkManager recipeId={recipe.id} />
     </div>
   );

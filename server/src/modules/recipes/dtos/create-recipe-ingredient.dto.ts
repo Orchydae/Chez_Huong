@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateRecipeIngredientDto {
     // Nutrition source — AT MOST ONE of ingredientId / recipeRefId. With neither,
@@ -25,7 +25,10 @@ export class CreateRecipeIngredientDto {
     @IsString()
     quantity!: string;
 
+    // Required on a PUBLISHED recipe, not on a DRAFT — like the other content
+    // fields, "non-empty" is a completeness rule enforced in RecipesService
+    // (recipe-completeness.ts) at publish time, so a draft may leave it blank.
+    // The DTO only guarantees the type.
     @IsString()
-    @IsNotEmpty()
     unit!: string;
 }

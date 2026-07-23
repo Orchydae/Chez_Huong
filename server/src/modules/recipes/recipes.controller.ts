@@ -101,8 +101,13 @@ export class RecipesController {
     @Post()
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN, Role.WRITER)
-    create(@Body() dto: CreateRecipeDto, @Request() req: AuthedRequest) {
-        return this.recipes.create(dto, req.user.userId);
+    create(
+        @Body() dto: CreateRecipeDto,
+        @Query('force') force: string | undefined,
+        @Request() req: AuthedRequest,
+    ) {
+        // ?force=true → publish even if incomplete (author confirmed the warning)
+        return this.recipes.create(dto, req.user.userId, force === 'true');
     }
 
     @Put(':id')
@@ -111,16 +116,23 @@ export class RecipesController {
     update(
         @Param('id', ParseIntPipe) id: number,
         @Body() dto: UpdateRecipeDto,
+        @Query('force') force: string | undefined,
         @Request() req: AuthedRequest,
     ) {
-        return this.recipes.update(id, dto, req.user.userId, req.user.role);
+        // ?force=true → save an incomplete PUBLISHED recipe anyway (drafts never gate)
+        return this.recipes.update(id, dto, req.user.userId, req.user.role, force === 'true');
     }
 
     @Patch(':id/publish')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN, Role.WRITER)
-    publish(@Param('id', ParseIntPipe) id: number, @Request() req: AuthedRequest) {
-        return this.recipes.publish(id, req.user.userId, req.user.role);
+    publish(
+        @Param('id', ParseIntPipe) id: number,
+        @Query('force') force: string | undefined,
+        @Request() req: AuthedRequest,
+    ) {
+        // ?force=true → publish anyway despite the incomplete-fields warning
+        return this.recipes.publish(id, req.user.userId, req.user.role, force === 'true');
     }
 
     @Patch(':id/unpublish')

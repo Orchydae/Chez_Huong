@@ -94,11 +94,40 @@ export function useLikedRecipes() {
 
 // ─── Writes ────────────────────────────────────────────────────────────
 
+/**
+ * Create a recipe. `force` (→ `?force=true`) lets a create-as-PUBLISHED go
+ * through even when the recipe is incomplete — the author confirmed the warning
+ * (see RECIPE_INCOMPLETE). Seeds the detail cache so an immediate redirect to the
+ * edit screen (autosave's create→edit hand-off) reads the row without a refetch.
+ */
 export function useCreateRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateRecipePayload) => api.post<Recipe>('/recipes', payload),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: recipeKeys.all }),
+    mutationFn: ({ payload, force }: { payload: CreateRecipePayload; force?: boolean }) =>
+      api.post<Recipe>(`/recipes${force ? '?force=true' : ''}`, payload),
+    onSuccess: saved => {
+      queryClient.setQueryData(recipeKeys.detail(saved.id), saved);
+      queryClient.setQueryData(recipeKeys.detail(saved.slug), saved);
+      void queryClient.invalidateQueries({ queryKey: recipeKeys.lists() });
+    },
+  });
+}
+
+/**
+ * Background autosave (draft-safety net). A plain PUT the server never blocks on
+ * completeness, sent with `?force=true` for good measure. Deliberately LIGHT:
+ * seeds the detail cache only — no list/nutrition invalidation — because it fires
+ * often (on every field blur). Lists refresh on the next manual save/navigation.
+ */
+export function useAutosaveRecipe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: UpdateRecipePayload }) =>
+      api.put<Recipe>(`/recipes/${id}?force=true`, payload),
+    onSuccess: saved => {
+      queryClient.setQueryData(recipeKeys.detail(saved.id), saved);
+      queryClient.setQueryData(recipeKeys.detail(saved.slug), saved);
+    },
   });
 }
 
@@ -123,15 +152,26 @@ function useRecipeWrite<TVars>(mutationFn: (vars: TVars) => Promise<Recipe>) {
   });
 }
 
+/**
+ * Explicit content save. `force` (→ `?force=true`) lets an already-PUBLISHED
+ * recipe be saved even when incomplete, once the author confirms the warning
+ * (a DRAFT never gates). Drafts autosave via useAutosaveRecipe instead.
+ */
 export function useUpdateRecipe() {
-  return useRecipeWrite(({ id, payload }: { id: number; payload: UpdateRecipePayload }) =>
-    api.put<Recipe>(`/recipes/${id}`, payload),
+  return useRecipeWrite(({ id, payload, force }: { id: number; payload: UpdateRecipePayload; force?: boolean }) =>
+    api.put<Recipe>(`/recipes/${id}${force ? '?force=true' : ''}`, payload),
   );
 }
 
-/** Publishing is its own endpoint — a `status` field in a PUT body is ignored. */
+/**
+ * Publishing is its own endpoint — a `status` field in a PUT body is ignored.
+ * `force` (→ `?force=true`) publishes despite the incomplete-fields warning,
+ * once the author has confirmed it.
+ */
 export function usePublishRecipe() {
-  return useRecipeWrite((id: number) => api.patch<Recipe>(`/recipes/${id}/publish`));
+  return useRecipeWrite(({ id, force }: { id: number; force?: boolean }) =>
+    api.patch<Recipe>(`/recipes/${id}/publish${force ? '?force=true' : ''}`),
+  );
 }
 
 export function useUnpublishRecipe() {

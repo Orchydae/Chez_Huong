@@ -43,3 +43,22 @@ export function fieldValidationException(
         fields: errors.map(e => e.path),
     });
 }
+
+/**
+ * Same envelope, tagged `code: 'RECIPE_INCOMPLETE'`. This 400 is not a hard
+ * error but an OVERRIDABLE one: the recipe isn't complete enough to publish, yet
+ * the author may choose to publish anyway (retrying with `?force=true`). The code
+ * lets the client tell this apart from a real validation failure and offer a
+ * "publish anyway?" confirmation instead of a plain error.
+ */
+export function recipeIncompleteException(
+    errors: { path: string; message: string }[],
+): BadRequestException {
+    return new BadRequestException({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: errors.map(e => e.message),
+        fields: errors.map(e => e.path),
+        code: 'RECIPE_INCOMPLETE',
+    });
+}

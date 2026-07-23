@@ -37,12 +37,19 @@ export class ApiError extends Error {
    * the exact row/field that failed. Absent when the error isn't field-scoped.
    */
   readonly fields?: string[];
+  /**
+   * Machine-readable tag some 400s carry (e.g. `RECIPE_INCOMPLETE`) so callers
+   * can branch on the KIND of error, not its (English) message. Absent on most
+   * errors.
+   */
+  readonly code?: string;
 
-  constructor(status: number, message: string, fields?: string[]) {
+  constructor(status: number, message: string, fields?: string[], code?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.fields = fields;
+    this.code = code;
   }
 }
 
@@ -87,8 +94,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   if (!res.ok) {
-    const { message, fields } = await extractError(res);
-    throw new ApiError(res.status, message, fields);
+    const { message, fields, code } = await extractError(res);
+    throw new ApiError(res.status, message, fields, code);
   }
 
   if (res.status === 204) return undefined as T;
@@ -100,11 +107,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
  * a { fields: string[] } of the offending dotted paths. Collapse the message to
  * one string and pass the field paths through so callers can map them to rows.
  */
-async function extractError(res: Response): Promise<{ message: string; fields?: string[] }> {
+async function extractError(
+  res: Response,
+): Promise<{ message: string; fields?: string[]; code?: string }> {
   try {
     const data: unknown = await res.json();
     if (data && typeof data === 'object') {
-      const obj = data as { message?: string | string[]; fields?: unknown };
+      const obj = data as { message?: string | string[]; fields?: unknown; code?: unknown };
       const message =
         obj.message == null
           ? `HTTP ${res.status}`
@@ -114,7 +123,8 @@ async function extractError(res: Response): Promise<{ message: string; fields?: 
       const fields = Array.isArray(obj.fields)
         ? obj.fields.filter((f): f is string => typeof f === 'string')
         : undefined;
-      return { message, fields };
+      const code = typeof obj.code === 'string' ? obj.code : undefined;
+      return { message, fields, code };
     }
   } catch {
     /* non-JSON body — fall through */

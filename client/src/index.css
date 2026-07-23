@@ -13,6 +13,10 @@
   --color-leaf: #ded369;
   --color-coral: #e0475b;
   --color-contrast: #d2d2d2;
+  /* deep appetising red — constant backdrop behind transparent dish PNGs on
+     the recipe hero, so cut-out photos read against a warm, inviting colour
+     instead of near-black. Kept dark enough for white/cream overlay text. */
+  --color-chili: #7a1f2b;
 
   --font-sans: 'Be Vietnam Pro', system-ui, sans-serif;
   --font-serif: 'Cormorant Garamond', Georgia, serif;

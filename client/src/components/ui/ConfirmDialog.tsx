@@ -8,17 +8,22 @@ interface ConfirmDialogProps {
   message: string;
   /** Label of the confirming button (e.g. "Supprimer"). */
   confirmLabel: string;
+  /** Styling of the confirm button. Defaults to `danger` (destructive actions);
+   *  pass `primary` for a non-destructive confirm like "publish anyway". */
+  confirmVariant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   /** Disables both buttons and shows a spinner while the action runs. */
   busy?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-/** Destructive-action confirmation: cancel is the safe, primary-looking choice. */
+/** Confirmation dialog: cancel is the safe choice; the confirm button's tone
+ *  (destructive vs. plain) is set by `confirmVariant`. */
 export default function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  confirmVariant = 'danger',
   busy = false,
   onConfirm,
   onCancel,
@@ -38,7 +43,7 @@ export default function ConfirmDialog({
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
           {t('common.cancel')}
         </Button>
-        <Button variant="danger" onClick={onConfirm} disabled={busy}>
+        <Button variant={confirmVariant} onClick={onConfirm} disabled={busy}>
           {busy && <Spinner size={18} />}
           {confirmLabel}
         </Button>

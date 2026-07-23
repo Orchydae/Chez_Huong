@@ -10,7 +10,11 @@ import { CreateRecipeDto } from './dtos/create-recipe.dto';
 import { UpdateRecipeDto } from './dtos/update-recipe.dto';
 import { DiscoverRecipesDto } from './dtos/discover-recipes.dto';
 import { slugify } from './slug.util';
-import { fieldValidationException } from '../../shared/validation-exception.factory';
+import {
+    fieldValidationException,
+    recipeIncompleteException,
+} from '../../shared/validation-exception.factory';
+import { findRecipeCompletenessErrors, RecipeCompletenessShape } from './recipe-completeness';
 
 /** Brief shape of a recipe referenced AS an ingredient — the clickable link target. */
 const linkedRecipeBrief = { id: true, title: true, slug: true, status: true } satisfies Prisma.RecipeSelect;
@@ -183,10 +187,13 @@ export class RecipesService {
 
     // ─── Writes ────────────────────────────────────────────────────────
 
-    async create(dto: CreateRecipeDto, authorId: string) {
+    async create(dto: CreateRecipeDto, authorId: string, force = false) {
         await this.verifyIngredientRows(dto);
-        const refTitles = await this.loadRefTitles(dto);
         const status = dto.status ?? RecipeStatus.DRAFT;
+        // Publishing in one step should be complete — but the author can override
+        // (force). A draft may always be saved blank or partial.
+        if (status === RecipeStatus.PUBLISHED) this.assertRecipeComplete(dto, force);
+        const refTitles = await this.loadRefTitles(dto);
         const slug = await this.generateUniqueSlug(dto.title);
         return this.prisma.recipe.create({
             data: {
@@ -204,10 +211,11 @@ export class RecipesService {
         dto: UpdateRecipeDto,
         requesterUserId: string,
         requesterRole: string,
+        force = false,
     ) {
         const existing = await this.prisma.recipe.findUnique({
             where: { id },
-            select: { id: true, authorId: true, publishedAt: true },
+            select: { id: true, authorId: true, publishedAt: true, status: true },
         });
         if (!existing) {
             throw new NotFoundException(`Recipe ${id} not found`);
@@ -219,6 +227,12 @@ export class RecipesService {
         // saving unrelated edits (its nutrition just stops rolling up).
         const grandfatheredRefIds = await this.loadStoredRefIds(id);
         await this.verifyIngredientRows(dto, id, grandfatheredRefIds);
+        // A DRAFT is a scratchpad — saving it never blocks on completeness (this
+        // is what makes background autosave safe). An already-PUBLISHED recipe is
+        // LIVE, so saving it incomplete would degrade public content: that raises
+        // the overridable RECIPE_INCOMPLETE warning unless the author confirmed
+        // (force). The client only autosaves drafts, never published recipes.
+        if (existing.status === RecipeStatus.PUBLISHED) this.assertRecipeComplete(dto, force);
         const refTitles = await this.loadRefTitles(dto);
 
         // The slug re-tracks the title only while the recipe has NEVER been
@@ -249,15 +263,47 @@ export class RecipesService {
     }
 
     /** Make a recipe public. Freezes the slug on the FIRST publish (ADR-03). Idempotent. */
-    async publish(id: number, requesterUserId: string, requesterRole: string) {
+    async publish(id: number, requesterUserId: string, requesterRole: string, force = false) {
+        // Pull the stored content (ordered to match how the editor indexes rows,
+        // so a completeness 400 highlights the right ones) — publishing an
+        // incomplete draft raises the overridable RECIPE_INCOMPLETE 400 unless the
+        // author already confirmed (force).
         const existing = await this.prisma.recipe.findUnique({
             where: { id },
-            select: { id: true, authorId: true, publishedAt: true },
+            select: {
+                id: true,
+                authorId: true,
+                publishedAt: true,
+                cuisine: true,
+                ingredientSections: {
+                    orderBy: { id: 'asc' },
+                    select: {
+                        name: true,
+                        ingredients: {
+                            orderBy: { id: 'asc' },
+                            select: {
+                                ingredientId: true,
+                                recipeRefId: true,
+                                displayName: true,
+                                unit: true,
+                            },
+                        },
+                    },
+                },
+                stepSections: {
+                    orderBy: { id: 'asc' },
+                    select: {
+                        title: true,
+                        steps: { orderBy: { order: 'asc' }, select: { description: true } },
+                    },
+                },
+            },
         });
         if (!existing) {
             throw new NotFoundException(`Recipe ${id} not found`);
         }
         this.assertCanModify(existing.authorId, requesterUserId, requesterRole, 'publish');
+        this.assertRecipeComplete(existing, force);
 
         return this.prisma.recipe.update({
             where: { id },
@@ -424,10 +470,12 @@ export class RecipesService {
     }
 
     /**
-     * Validate every ingredient row. Each row is at most ONE nutrition source —
-     * a catalogue ingredient OR a recipe-as-ingredient — or neither (free text,
-     * which then needs a name). Catalogue ids and recipe refs must exist; a
-     * recipe ref must be published, not this recipe, and not form a cycle.
+     * Validate the INTEGRITY of every ingredient row (runs for drafts too, so a
+     * draft never persists referential garbage). Each row is at most ONE nutrition
+     * source — a catalogue ingredient OR a recipe-as-ingredient — never both.
+     * Catalogue ids and recipe refs must exist; a recipe ref must be published,
+     * not this recipe, and not form a cycle. Row COMPLETENESS (a source or name,
+     * plus a unit) is a separate publish-time concern — see assertRecipeComplete.
      * `parentId` is the recipe being edited (undefined on create — a brand-new
      * recipe can't be referenced yet, so it can't be in a cycle).
      * `grandfatheredRefIds` are recipe refs already stored on this recipe: they
@@ -447,15 +495,14 @@ export class RecipesService {
 
         dto.ingredientSections.forEach((section, si) => {
             section.ingredients.forEach((r, ri) => {
+                // Integrity only — a row may point at a catalogue ingredient OR a
+                // recipe, never both. Whether a row is COMPLETE (carries a source
+                // or a name, and a unit) is a publish-time concern owned by
+                // assertRecipeComplete, so a DRAFT may hold blank rows.
                 if (r.ingredientId != null && r.recipeRefId != null) {
                     errors.push({
                         path: rowPath(si, ri),
                         message: 'An ingredient cannot be both a catalogue ingredient and a recipe',
-                    });
-                } else if (r.ingredientId == null && r.recipeRefId == null && !r.displayName?.trim()) {
-                    errors.push({
-                        path: rowPath(si, ri),
-                        message: 'A free-text ingredient needs a name',
                     });
                 }
             });
@@ -497,6 +544,19 @@ export class RecipesService {
         }
 
         if (errors.length > 0) throw fieldValidationException(errors);
+    }
+
+    /**
+     * The publishability contract: a recipe being published should be complete.
+     * Raises an OVERRIDABLE, field-scoped 400 (`RECIPE_INCOMPLETE`) — the client
+     * turns it into a "publish anyway?" confirmation and, on confirm, retries with
+     * `force`, which skips this check. Callers pass the caller's own choice via
+     * `force`; drafts and plain content saves (PUT) never reach here at all.
+     */
+    private assertRecipeComplete(recipe: RecipeCompletenessShape, force: boolean): void {
+        if (force) return;
+        const errors = findRecipeCompletenessErrors(recipe);
+        if (errors.length > 0) throw recipeIncompleteException(errors);
     }
 
     /**

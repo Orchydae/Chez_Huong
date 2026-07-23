@@ -9,6 +9,7 @@ import {
   useUnpublishRecipe,
 } from '../../api/recipes.api';
 import type { Recipe } from '../../api/types';
+import { ApiError } from '../../api/client';
 import { toast } from '../../lib/toast';
 import { useApiErrorToast } from '../../lib/apiError';
 import { formatDate } from '../../lib/format';
@@ -29,6 +30,8 @@ export default function MyRecipesPage() {
   // each other's busy state (a single shared id would)
   const [pending, setPending] = useState<Record<number, 'lifecycle' | 'delete'>>({});
   const [toDelete, setToDelete] = useState<Recipe | null>(null);
+  // A recipe whose publish came back RECIPE_INCOMPLETE — awaiting "publish anyway?"
+  const [toPublishAnyway, setToPublishAnyway] = useState<Recipe | null>(null);
 
   const beginAction = (id: number, kind: 'lifecycle' | 'delete') =>
     setPending(prev => ({ ...prev, [id]: kind }));
@@ -43,22 +46,35 @@ export default function MyRecipesPage() {
   // defaults — the lifecycle mutations add no domain rows.
   const reportError = useApiErrorToast();
 
-  const runLifecycle = async (recipe: Recipe, action: 'publish' | 'unpublish') => {
+  const runLifecycle = async (recipe: Recipe, action: 'publish' | 'unpublish', force = false) => {
     if (pending[recipe.id]) return;
     beginAction(recipe.id, 'lifecycle');
     try {
       if (action === 'publish') {
-        await publishRecipe.mutateAsync(recipe.id);
+        await publishRecipe.mutateAsync({ id: recipe.id, force });
         toast.success(t('myRecipes.published'));
       } else {
         await unpublishRecipe.mutateAsync(recipe.id);
         toast.success(t('myRecipes.unpublished'));
       }
     } catch (err) {
-      reportError(err);
+      // Incomplete isn't fatal here either — offer "publish anyway" instead of
+      // an error toast; anything else is a real error.
+      if (err instanceof ApiError && err.code === 'RECIPE_INCOMPLETE') {
+        setToPublishAnyway(recipe);
+      } else {
+        reportError(err);
+      }
     } finally {
       endAction(recipe.id);
     }
+  };
+
+  const confirmPublishAnyway = () => {
+    if (!toPublishAnyway) return;
+    const recipe = toPublishAnyway;
+    setToPublishAnyway(null);
+    void runLifecycle(recipe, 'publish', true);
   };
 
   const confirmDelete = async () => {
@@ -169,6 +185,17 @@ export default function MyRecipesPage() {
           busy={pending[toDelete.id] === 'delete'}
           onConfirm={() => void confirmDelete()}
           onCancel={() => setToDelete(null)}
+        />
+      )}
+
+      {toPublishAnyway && (
+        <ConfirmDialog
+          title={t('form.publishIncompleteTitle')}
+          message={t('form.publishIncompleteMessage')}
+          confirmLabel={t('form.publishAnyway')}
+          confirmVariant="primary"
+          onConfirm={confirmPublishAnyway}
+          onCancel={() => setToPublishAnyway(null)}
         />
       )}
     </div>

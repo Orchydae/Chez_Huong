@@ -164,6 +164,7 @@
     "titlePlaceholder": "Recipe title",
     "descriptionPlaceholder": "Recipe description...",
     "locale": "Language",
+    "localeHint": "Original language",
     "cuisinePlaceholder": "Vietnam",
     "yieldLabel": "Makes (optional)",
     "yieldPlaceholder": "e.g. 24 dumplings",
@@ -204,7 +205,13 @@
     "errorValidation": "Some fields are incomplete or invalid. Check the form and try again.",
     "errorRowsIncomplete": "Some rows are incomplete — see the fields highlighted in red.",
     "errorFieldRequired": "Required",
-    "errorIngredientConfirm": "Could not add this ingredient to the catalogue"
+    "errorIngredientConfirm": "Could not add this ingredient to the catalogue",
+    "autosaveSaving": "Saving…",
+    "autosaveSaved": "Saved",
+    "autosaveError": "Autosave failed — your latest change isn't saved",
+    "publishIncompleteTitle": "Publish anyway?",
+    "publishIncompleteMessage": "Some fields are still incomplete (highlighted in red). You can finish them now, or publish anyway and complete the recipe later.",
+    "publishAnyway": "Publish anyway"
   },
   "createRecipe": {
     "title": "New recipe",

@@ -1,5 +1,4 @@
 import {
-    ArrayMinSize,
     ArrayUnique,
     IsArray,
     IsEnum,
@@ -50,8 +49,10 @@ export class CreateRecipeDto {
     @IsEnum(RecipeType)
     type!: RecipeType;
 
+    // Required on a PUBLISHED recipe, blank-able on a DRAFT — the "non-empty"
+    // rule is a publish-time completeness check (recipe-completeness.ts), so a
+    // draft (and every autosave) can be saved before the author fills it in.
     @IsString()
-    @IsNotEmpty()
     cuisine!: string;
 
     @IsNumber()
@@ -76,10 +77,13 @@ export class CreateRecipeDto {
     @IsEnum(RecipeStatus)
     status?: RecipeStatus;
 
+    // Structure only (an array of well-typed sections). Whether there's ENOUGH
+    // here to publish — at least one section, each complete — is a completeness
+    // rule enforced in RecipesService (recipe-completeness.ts), so a DRAFT may
+    // send an empty or partial list.
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CreateIngredientSectionDto)
-    @ArrayMinSize(1, { message: 'Recipe must have at least one ingredient section' })
     ingredientSections!: CreateIngredientSectionDto[];
 
     @IsOptional()
@@ -88,9 +92,9 @@ export class CreateRecipeDto {
     @IsEnum(ParticularityType, { each: true })
     particularities?: ParticularityType[];
 
+    // See ingredientSections: structure here, completeness at publish time.
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CreateStepSectionDto)
-    @ArrayMinSize(1, { message: 'Recipe must have at least one step section' })
     stepSections!: CreateStepSectionDto[];
 }
